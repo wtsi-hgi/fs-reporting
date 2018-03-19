@@ -21,3 +21,9 @@ Grouped by:
   * Log files (`*.{log,stdout,stderr,o,e}`)
   * Temporary (`*{tmp,temp}*`)
   * Other (everything else)
+
+Interested in:
+
+* Total inodes
+* Total size
+* Total cost, relative to `ctime`
