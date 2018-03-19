@@ -6,6 +6,18 @@
 
 set -euo pipefail
 
+surround() {
+  # Surround lines from stdin
+  local l="$1"
+  local r="${2-$l}"
+  sed "s/.*/${l}&${r}/"
+}
+
+delimit() {
+  # Comma-delimit lines from stdin
+  paste -sd, -
+}
+
 get_owners() {
   # Get owners of group
   local group="$1"
@@ -14,22 +26,14 @@ get_owners() {
 }
 
 main() {
+  # JSONise lists of group members
+  # FIXME This will return invalid JSON for non-existent groups
   local -a groups=("$@")
-  local -i delimit=0
-
-  echo "{"
 
   for group in "${groups[@]}"; do
-    (( delimit )) && echo ","
-
-    echo "\"${group}\": ["
-    get_owners "${group}" | sed 's/.*/"&"/' | paste -sd, -
-    echo "]"
-
-    delimit=1
-  done
-
-  echo "}"
+    echo -n "\"${group}\":"
+    get_owners "${group}" | surround \" | delimit | surround \[ \]
+  done | delimit | surround \{ \}
 }
 
 main "$@"
