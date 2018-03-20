@@ -1,13 +1,9 @@
-#!/usr/bin/env bash
-
 # Get filesystem cost per terabyte year
 # Christopher Harrison <ch12@sanger.ac.uk>
 
 # n.b., This doesn't need to be any prettier :P
 
-set -euo pipefail
-
-main() {
+get_fs_cost() {
   local fs_type="$1"
 
   case "${fs_type}" in
@@ -35,5 +31,3 @@ main() {
       ;;
   esac
 }
-
-main "$@"
