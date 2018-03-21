@@ -19,10 +19,12 @@
 
 # Aggregated data is tab-delimited with the following fields:
 # 1.  Filesystem type
-# 2.  Organisational unit ("group:GID" or "user:UID")
-# 3.  inodes
-# 4.  Size (bytes)
-# 5.  Cost since last changed (GBP)
+# 2.  Organisational tag ("group:GID" or "user:UID")
+# 3.  Filetype tag ("all", "cram", "bam", "index", "compressed",
+#     "uncompressed", "checkpoints", "logs", "temp" or "other")
+# 4.  inodes
+# 5.  Size (bytes)
+# 6.  Cost since last changed (GBP)
 
 set -euo pipefail
 
@@ -56,6 +58,9 @@ main() {
   '
     BEGIN {
       FS = OFS = "\t"
+
+      yr = 60 * 60 * 24 * 365.2425  # 31556952s in an average year
+      TiB = 1024 ^ 4
     }
 
     {
@@ -64,25 +69,26 @@ main() {
       gid = $4
       ctime = $7
 
-      # 60s * 60m * 24hr * 365.2425d = 31556952s in an average year
-      cost = ctime > NOW ? 0
-                         : FS_COST * (NOW - ctime) / 31556952
+      cost = FS_COST * (size / TiB) * ((NOW - ctime) / yr)
 
       user_inodes[uid]++
-      user_size[uid] += size
-      user_cost[uid] += cost
-
       group_inodes[gid]++
+
+      user_size[uid] += size
       group_size[gid] += size
-      group_cost[gid] += cost
+
+      if (cost > 0) {
+        user_cost[uid] += cost
+        group_cost[gid] += cost
+      }
     }
 
     END {
       for (user in user_inodes)
-        print FS_TYPE, "user:" user, user_inodes[user], user_size[user], user_cost[user]
+        print FS_TYPE, "user:" user, "all", user_inodes[user], user_size[user], user_cost[user]
 
       for (group in group_inodes)
-        print FS_TYPE, "group:" group, group_inodes[group], group_size[group], group_cost[group]
+        print FS_TYPE, "group:" group, "all", group_inodes[group], group_size[group], group_cost[group]
     }
   '
 }
