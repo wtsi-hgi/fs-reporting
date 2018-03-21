@@ -39,12 +39,13 @@ The aggregation is output to `stdout` as tab-delimited data with the
 following fields:
 
 1. Filesystem type
-2. Organisational tag ("group:GID" or "user:UID")
-3. Filetype tag ("all", "cram", "bam", "index", "compressed",
+2. Organisational tag ("group" or "user")
+3. Organisational ID (Unix group ID or user ID)
+4. Filetype tag ("all", "cram", "bam", "index", "compressed",
    "uncompressed", "checkpoints", "logs", "temp" or "other")
-4. inodes
-5. Size (bytes)
-6. Cost since last changed (GBP)
+5. inodes
+6. Size (bytes)
+7. Cost since last changed (GBP)
 
 The aggregation script takes two optional, positional arguments, which
 are necessary to calculate the `ctime` cost:

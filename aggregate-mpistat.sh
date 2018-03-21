@@ -19,12 +19,13 @@
 
 # Aggregated data is tab-delimited with the following fields:
 # 1.  Filesystem type
-# 2.  Organisational tag ("group:GID" or "user:UID")
-# 3.  Filetype tag ("all", "cram", "bam", "index", "compressed",
+# 2.  Organisational tag ("group" or "user")
+# 3.  Organisational ID (Unix group ID or user ID)
+# 4.  Filetype tag ("all", "cram", "bam", "index", "compressed",
 #     "uncompressed", "checkpoints", "logs", "temp" or "other")
-# 4.  inodes
-# 5.  Size (bytes)
-# 6.  Cost since last changed (GBP)
+# 5.  inodes
+# 6.  Size (bytes)
+# 7.  Cost since last changed (GBP)
 
 set -euo pipefail
 
@@ -61,31 +62,34 @@ main() {
     }
 
     {
-      size = $2
+      file_size = $2
       uid = $3
       gid = $4
+
       ctime = $7
+      file_cost = FS_COST * (file_size / TiB) * ((SINCE - ctime) / yr)
 
-      cost = FS_COST * (size / TiB) * ((SINCE - ctime) / yr)
+      # Tally up
+      inodes["user:" uid]++
+      inodes["group:" gid]++
 
-      user_inodes[uid]++
-      group_inodes[gid]++
+      size["user:" uid] += file_size
+      size["group:" gid] += file_size
 
-      user_size[uid] += size
-      group_size[gid] += size
-
-      if (cost > 0) {
-        user_cost[uid] += cost
-        group_cost[gid] += cost
+      if (filecost > 0) {
+        cost["user:" uid] += file_cost
+        cost["group:" gid] += file_cost
       }
     }
 
     END {
-      for (user in user_inodes)
-        print FS_TYPE, "user:" user, "all", user_inodes[user], user_size[user], user_cost[user]
+      for (id in inodes) {
+        split(id, id_bits, ":")
+        org_tag = id_bits[1]
+        org_id  = id_bits[2]
 
-      for (group in group_inodes)
-        print FS_TYPE, "group:" group, "all", group_inodes[group], group_size[group], group_cost[group]
+        print FS_TYPE, org_tag, org_id, "all", inodes[id], size[id], cost[id]
+      }
     }
   '
 }
