@@ -18,7 +18,7 @@ Grouped by:
   * Compressed (`*.{bzip2,gz,tgz,zip,xz,bgz,bcf}`)
   * Uncompressed (`{README,*.{sam,fasta,fastq,fa,fq,vcf,csv,tsv,txt,text}}`)
   * Checkpoints (`*jobstate.context`)
-  * Log files (`*.{log,stdout,stderr,o,e}`)
+  * Log files (`*.{log,stdout,stderr,o,out,e,err}`)
   * Temporary (`*{tmp,temp}*`)
   * Other (everything else)
 
@@ -43,16 +43,16 @@ following fields:
 3. Organisational ID (Unix group ID or user ID)
 4. Filetype tag (`all`, `cram`, `bam`, `index`, `compressed`,
    `uncompressed`, `checkpoints`, `logs`, `temp` or `other`)
-5. inodes
-6. Size (bytes)
-7. Cost since last changed (GBP)
+5. Total inodes
+6. Total size (bytes)
+7. Total cost since last changed (GBP)
 
-The aggregation script takes two optional, positional arguments, which
-are necessary to calculate the `ctime` cost:
+The aggregation script takes three optional, positional arguments:
 
-1. The Unix time from which to base cost calculation, defaulting to the
+1. The filetype tag filter, defaulting to `all`.
+2. The Unix time from which to base cost calculation, defaulting to the
    current system time.
-2. The filesystem type from which to base the cost calculation,
+3. The filesystem type from which to base the cost calculation,
    defaulting to `lustre`.
 
 The filesystem types, that define cost per terabyte year, are enumerated
