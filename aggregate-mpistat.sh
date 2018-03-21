@@ -33,7 +33,7 @@ if [[ "${OS}" == "Darwin" ]]; then
   # Use GNU coreutils on macOS (for development/debugging)
   shopt -s expand_aliases
   alias readlink="greadlink"
-  alias stat="gstat"
+  alias date="gdate"
 fi
 
 BINARY="$(readlink -fn "$0")"
@@ -44,16 +44,14 @@ source "${WORK_DIR}/get-fs-cost.sh"
 source "${WORK_DIR}/get-group-owners.sh"
 
 main() {
-  local mpistat_data="$1"
-  local mpistat_time="$(stat -c "%Y" "${mpistat_data}")"
+  local since="${1-$(date +"%s")}"
 
   local fs_type="${2-lustre}"
   local fs_cost="$(get_fs_cost "${fs_type}")"
 
-  zcat "${mpistat_data}" \
-  | awk -v FS_TYPE="${fs_type}" \
-        -v FS_COST="${fs_cost}" \
-        -v NOW="${mpistat_time}" \
+  awk -v FS_TYPE="${fs_type}" \
+      -v FS_COST="${fs_cost}" \
+      -v SINCE="${since}" \
   '
     BEGIN {
       FS = OFS = "\t"
@@ -68,7 +66,7 @@ main() {
       gid = $4
       ctime = $7
 
-      cost = FS_COST * (size / TiB) * ((NOW - ctime) / yr)
+      cost = FS_COST * (size / TiB) * ((SINCE - ctime) / yr)
 
       user_inodes[uid]++
       group_inodes[gid]++
