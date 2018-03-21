@@ -76,7 +76,7 @@ main() {
       size["user:" uid] += file_size
       size["group:" gid] += file_size
 
-      if (filecost > 0) {
+      if (file_cost > 0) {
         cost["user:" uid] += file_cost
         cost["group:" gid] += file_cost
       }
