@@ -12,8 +12,8 @@
 # 6.  Last modified time (Unix time)
 # 7.  Last changed time (Unix time)
 # 8.  Protection Mode (f=regular file, d=directory, l=symlink, s=socket,
-#     B=block special, c=character special, F=fifo, X otherwise)
-# 9.  Inode ID
+#     b=block special, c=character special, F=fifo, X otherwise)
+# 9.  inode ID
 # 10. Number of hardlinks to file
 # 11. Device ID
 
@@ -50,7 +50,6 @@ main() {
   local fs_type="${2-lustre}"
   local fs_cost="$(get_fs_cost "${fs_type}")"
 
-  # FIXME Is Awk going to handle this at scale?
   zcat "${mpistat_data}" \
   | awk -v FS_TYPE="${fs_type}" \
         -v FS_COST="${fs_cost}" \
