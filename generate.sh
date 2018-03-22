@@ -66,6 +66,34 @@ dispatch() {
       ;;
 
     "__compile")
+      local output_dir="$2"
+      local -a emails=()
+
+      local -i send_email=0
+      if (( $# > 2 )); then
+        emails=("${@:3}")
+        send_email=1
+      fi
+
+      if ! [[ -e "${output_dir}/aggregated_data" ]]; then
+        if (( send_email )); then
+          mail -s "Filesystem Report Generation Failed!" "${emails[@]}" <<-EOF
+					Filesystem report could not be generated! No aggregate data found.
+					EOF
+        fi
+
+        >&2 echo "No aggregate data available to generate report!"
+        exit 1
+      fi
+
+      # TODO Compile report
+
+      # Send completion e-mail
+      if (( send_email )); then
+        mail -s "Filesystem Report Complete!" "${emails[@]}" <<-EOF
+				Filesystem report is ready and available at: ${output_dir}/report.pdf
+				EOF
+      fi
       ;;
 
     *)
@@ -191,7 +219,7 @@ dispatch() {
       local job_id="${RANDOM}"
       local aggregate_job_name="fs-report-aggregate-${job_id}"
       local aggregate_log="${log_dir}/aggregate-${job_id}.log"
-      bsub "${lsf_aggregate_ops[@]}" \
+      bsub "${lsf_aggregate_ops[@]-}" \
            -J "${aggregate_job_name}" \
            -o "${aggregate_log}" -e "${aggregate_log}" \
            "${BINARY}" __aggregate # TODO Options?...
@@ -199,11 +227,11 @@ dispatch() {
       # Submit compilation job
       local compile_job_name="fs-report-compile-${job_id}"
       local compile_log="${log_dir}/compile-${job_id}.log"
-      bsub "${lsf_compile_ops[@]}" \
+      bsub "${lsf_compile_ops[@]-}" \
            -J "${compile_job_name}" \
            -w "ended(${aggregate_job_name})" \
            -o "${compile_log}" -e "${compile_log}" \
-           "${BINARY}" __compile # TODO Options?...
+           "${BINARY}" __compile "${output_dir}" "${emails[@]-}"
       ;;
   esac
 }
