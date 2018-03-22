@@ -1,0 +1,2 @@
+# Unix group ID to PI user ID mapping
+# Tab-delimited, one-record per line: <GID>\t<UID>
