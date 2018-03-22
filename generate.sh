@@ -15,17 +15,6 @@ fi
 
 BINARY="$(readlink -fn "$0")"
 
-create_directories() {
-  # Create directories, if they don't already exist
-  local -a dirs=("$@")
-
-  for dir in "${dirs[@]}"; do
-    if ! [[ -d "${dir}" ]]; then
-      mkdir -p "${dir}"
-    fi
-  done
-}
-
 usage() {
   cat <<-EOF
 	Usage: $(basename "${BINARY}") [OPTIONS]
@@ -58,11 +47,35 @@ usage() {
 	EOF
 }
 
+create_directories() {
+  # Create directories, if they don't already exist
+  local -a dirs=("$@")
+
+  for dir in "${dirs[@]}"; do
+    if ! [[ -d "${dir}" ]]; then
+      mkdir -p "${dir}"
+    fi
+  done
+}
+
+aggregate_data() {
+  # TODO Aggregate data from source inputs
+  true
+}
+
+compile_report() {
+  # TODO Compile report from aggregated data
+  local aggregated_data="$1"
+  true
+}
+
 dispatch() {
   local mode="${1-}"
 
   case "${mode}" in
     "__aggregate")
+      # TODO Options?
+      aggregate_data # etc.
       ;;
 
     "__compile")
@@ -86,7 +99,7 @@ dispatch() {
         exit 1
       fi
 
-      # TODO Compile report
+      compile_report "${output_dir}/aggregated_data"
 
       # Send completion e-mail
       if (( send_email )); then
@@ -222,7 +235,7 @@ dispatch() {
       bsub "${lsf_aggregate_ops[@]-}" \
            -J "${aggregate_job_name}" \
            -o "${aggregate_log}" -e "${aggregate_log}" \
-           "${BINARY}" __aggregate # TODO Options?...
+           "${BINARY}" __aggregate "${output_dir}" # TODO Options?...
 
       # Submit compilation job
       local compile_job_name="fs-report-compile-${job_id}"
