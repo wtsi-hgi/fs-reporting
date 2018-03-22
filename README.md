@@ -28,9 +28,17 @@ Interested in:
 * Total size
 * Total cost, relative to `ctime`
 
-## Usage
+## Pipeline
 
-Aggregate `mpistat` data using `aggregate-mpistat.sh`, taking
+File paths in the `mpistat` data are base64 encoded. For aggregating by
+filetype, the data must be preclassified:
+
+    zcat lustre01.dat.gz | ./classify-filetype.sh
+
+This appends a field to the `mpistat` data containing the filetype and
+streams it to `stdout`.
+
+`mpistat` data can be aggregated using `aggregate-mpistat.sh`, taking
 uncompressed data from `stdin`:
 
     zcat lustre01.dat.gz lustre02.dat.gz | ./aggregate-mpistat.sh
@@ -49,7 +57,8 @@ following fields:
 
 The aggregation script takes three optional, positional arguments:
 
-1. The filetype tag filter, defaulting to `all`.
+1. The filetype tag filter, defaulting to `all`. Note that if the input
+   data has not been preclassified by filetype, this process will fail.
 2. The Unix time from which to base cost calculation, defaulting to the
    current system time.
 3. The filesystem type from which to base the cost calculation,
@@ -57,3 +66,15 @@ The aggregation script takes three optional, positional arguments:
 
 The filesystem types, that define cost per terabyte year, are enumerated
 in `get-fs-cost.sh`.
+
+Aggregated data can be mapped to PI by running it through `map-to-pi.sh`.
+This script strips out any `user` records and replaces `group` records
+with an appropriate `pi` record, using `group-pi.map`:
+
+    zcat foo.dat.gz | ./aggregate-mpistat.sh | ./map-to-pi.sh
+
+Note that this will not aggregate records by PI, it's strictly a mapping
+operation. Final aggregation can be done using the `merge-aggregates.sh`
+script:
+
+    ./merge-aggregates.sh lustre01.all lustre01.cram lustre01-pi.cram
