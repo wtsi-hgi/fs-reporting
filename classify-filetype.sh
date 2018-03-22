@@ -15,6 +15,7 @@ if [[ "${OS}" == "Darwin" ]]; then
   alias sed="gsed"
   alias base64="gbase64"
   alias tr="gtr"
+  alias cat="gcat"
   alias paste="gpaste"
 fi
 
