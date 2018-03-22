@@ -88,9 +88,9 @@ This will produce the output data that drives report generation.
 
 ## tl;dr
 
-To generate the aggregated data and compile the final report, a
-convenience script is available that will submit the jobs to an LFS
-cluster:
+To generate the aggregated data (i.e., running the complete pipeline
+outlined above) and compile the final report, a convenience script is
+available that will submit the jobs to an LFS cluster:
 
     generate.sh [--output DIRECTORY]
                 [--base TIME]
@@ -113,4 +113,4 @@ Option                   | Behaviour
 `--irods INPUT_DATA`     | Specify `INPUT_DATA` file for a iRODS filesytem; can be specified multiple times
 
 Note that at least one `--lustre`, `--nfs`, `--warehouse` or `--irods`
-option must be specified.
+option must be specified and readable from the cluster nodes.
