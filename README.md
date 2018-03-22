@@ -82,6 +82,6 @@ Unix user ID (per the mapping definition).
 Final aggregation/merging can be done using the `merge-aggregates.sh`
 script:
 
-    ./merge-aggregates.sh lustre01.all lustre01.cram lustre01-pi.cram
+    ./merge-aggregates.sh lustre01-all lustre01-cram lustre01-cram-pi
 
 This will produce the output data that drives report generation.
