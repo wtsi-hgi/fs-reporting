@@ -14,11 +14,18 @@ if [[ "${OS}" == "Darwin" ]]; then
   alias cut="gcut"
   alias sed="gsed"
   alias base64="gbase64"
+  alias tr="gtr"
+  alias paste="gpaste"
 fi
 
 BINARY="$(readlink -fn "$0")"
 
 classify() {
+  # Classify input: Append the base64 encoding of \0 to the first column
+  # of each line and then base64 decode; translate any \n that appear to
+  # X (i.e., files with newlines in their name) and \0 to a newline, so
+  # we restore one record per line. Finally, run the decoded file path
+  # through the classifier.
   local input="$1"
   cut -f1 "${input}" | sed 's/$/AA==/' | base64 -di | tr "\n\0" "X\n" | awk '
     /\.cram$/                                                  { print "cram"; next }
