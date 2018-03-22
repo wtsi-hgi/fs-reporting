@@ -99,6 +99,8 @@ available that will submit the jobs to an LSF cluster:
                 [--nfs INPUT_DATA]
                 [--warehouse INPUT_DATA]
                 [--irods INPUT_DATA]
+                [--lsf-aggregate OPTION]
+                [--lsf-compile OPTION]
 
 Taking the following options:
 
@@ -111,6 +113,8 @@ Option                   | Behaviour
 `--nfs INPUT_DATA`       | `INPUT_DATA` for a NFS filesytem; can be specified multiple times
 `--warehouse INPUT_DATA` | `INPUT_DATA` for a warehouse filesytem; can be specified multiple times
 `--irods INPUT_DATA`     | `INPUT_DATA` for a iRODS filesytem; can be specified multiple times
+`--lsf-aggregate OPTION` | Provide LSF `OPTION` to the aggregation job submission; can be specified multiple times
+`--lsf-compile OPTION`   | Provide LSF `OPTION` to the compilation job submission; can be specified multiple times
 
 Note that at least one `--lustre`, `--nfs`, `--warehouse` or `--irods`
 option must be specified with its `INPUT_DATA` readable from the cluster
