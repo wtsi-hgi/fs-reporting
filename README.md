@@ -107,10 +107,11 @@ Option                   | Behaviour
 `--output DIRECTORY`     | Create the output in `DIRECTORY`, defaulting to the current working directory
 `--base TIME`            | Set the base time to `TIME`, defaulting to the current system time
 `--email ADDRESS`        | E-mail address to which the completion notification is sent; can be specified multiple times
-`--lustre INPUT_DATA`    | Specify `INPUT_DATA` file for a Lustre filesytem; can be specified multiple times
-`--nfs INPUT_DATA`       | Specify `INPUT_DATA` file for a NFS filesytem; can be specified multiple times
-`--warehouse INPUT_DATA` | Specify `INPUT_DATA` file for a warehouse filesytem; can be specified multiple times
-`--irods INPUT_DATA`     | Specify `INPUT_DATA` file for a iRODS filesytem; can be specified multiple times
+`--lustre INPUT_DATA`    | `INPUT_DATA` for a Lustre filesytem; can be specified multiple times
+`--nfs INPUT_DATA`       | `INPUT_DATA` for a NFS filesytem; can be specified multiple times
+`--warehouse INPUT_DATA` | `INPUT_DATA` for a warehouse filesytem; can be specified multiple times
+`--irods INPUT_DATA`     | `INPUT_DATA` for a iRODS filesytem; can be specified multiple times
 
 Note that at least one `--lustre`, `--nfs`, `--warehouse` or `--irods`
-option must be specified and readable from the cluster nodes.
+option must be specified with its `INPUT_DATA` readable from the cluster
+nodes.
