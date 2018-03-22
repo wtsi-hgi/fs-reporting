@@ -15,6 +15,17 @@ fi
 
 BINARY="$(readlink -fn "$0")"
 
+create_directories() {
+  # Create directories, if they don't already exist
+  local -a dirs=("$@")
+
+  for dir in "${dirs[@]}"; do
+    if ! [[ -d "${dir}" ]]; then
+      mkdir -p "${dir}"
+    fi
+  done
+}
+
 usage() {
   cat <<-EOF
 	Usage: $(basename "${BINARY}") [OPTIONS]
@@ -51,6 +62,12 @@ dispatch() {
   local mode="${1-}"
 
   case "${mode}" in
+    "__aggregate")
+      ;;
+
+    "__compile")
+      ;;
+
     *)
       # Parse command line arguments and submit jobs
       local -i show_help=0
@@ -164,6 +181,29 @@ dispatch() {
         usage
         exit "${bad_options}"
       fi
+
+      # Create working directory structure, if it doesn't exist
+      local log_dir="${output_dir}/logs"
+      create_directories "${output_dir}" \
+                         "${log_dir}"
+
+      # Submit aggregation job
+      local job_id="${RANDOM}"
+      local aggregate_job_name="fs-report-aggregate-${job_id}"
+      local aggregate_log="${log_dir}/aggregate-${job_id}.log"
+      bsub "${lsf_aggregate_ops[@]}" \
+           -J "${aggregate_job_name}" \
+           -o "${aggregate_log}" -e "${aggregate_log}" \
+           "${BINARY}" __aggregate # TODO Options?...
+
+      # Submit compilation job
+      local compile_job_name="fs-report-compile-${job_id}"
+      local compile_log="${log_dir}/compile-${job_id}.log"
+      bsub "${lsf_compile_ops[@]}" \
+           -J "${compile_job_name}" \
+           -w "ended(${aggregate_job_name})" \
+           -o "${compile_log}" -e "${compile_log}" \
+           "${BINARY}" __compile # TODO Options?...
       ;;
   esac
 }
