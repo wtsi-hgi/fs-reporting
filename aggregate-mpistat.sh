@@ -17,6 +17,9 @@
 # 10. Number of hardlinks to file
 # 11. Device ID
 
+# If the data has been preclassified, it will have an additional field:
+# 12. File type
+
 # Aggregated data is tab-delimited with the following fields:
 # 1.  Filesystem type
 # 2.  Organisational tag ("group" or "user")
@@ -35,7 +38,6 @@ if [[ "${OS}" == "Darwin" ]]; then
   shopt -s expand_aliases
   alias readlink="greadlink"
   alias date="gdate"
-  alias base64="gbase64"
 fi
 
 BINARY="$(readlink -fn "$0")"
@@ -43,7 +45,6 @@ WORK_DIR="$(dirname "${BINARY}")"
 
 # Imports
 source "${WORK_DIR}/get-fs-cost.sh"
-source "${WORK_DIR}/get-group-owners.sh"
 
 usage() {
   cat <<-EOF
@@ -55,6 +56,9 @@ usage() {
 	* FILETYPE    Filetype filter [default: all]
 	* BASETIME    Base time for cost calculation [default: Current time]
 	* FILESYSTEM  Filesystem type for cost calculation [default: lustre]
+	
+	Note: To do non-trivial filetype filtering, the input data must be
+	preclassified by file type.
 	EOF
 }
 
@@ -85,7 +89,6 @@ main() {
   fi
 
   awk -v FILETYPE="${filetype}" \
-      -v BASE64="${BASH_ALIASES[base64]-base64}" \
       -v FS_TYPE="${fs_type}" \
       -v FS_COST="${fs_cost}" \
       -v SINCE="${since}" \
@@ -97,63 +100,20 @@ main() {
       TiB = 1024 ^ 4
     }
 
-    function is_filetype(file_path) {
-      # Check given file path (n.b., base64 encoded) matches FILETYPE
-
-      if (FILETYPE == "all")
-        return 1
-
-      # Base64 decode file path
-      decoder = "echo -n \"" file_path "\" | " BASE64 " -di"
-      decoder | getline decoded
-      close(decoder)
-
-      switch (decoded) {
-        case /\.cram$/:
-          type = "cram"
-          break
-
-        case /\.bam$/:
-          type = "bam"
-          break
-
-        case /\.(crai|bai|sai|fai|csi)$/:
-          type = "index"
-          break
-
-        case /\.(bzip2|gz|tgz|zip|xz|bgz|bcf)$/:
-          type = "compressed"
-          break
-
-        case /^README$|\.(sam,fasta,fastq,fa,fq,vcf,csv,tsv,txt,text)$/:
-          type = "uncompressed"
-          break
-
-        case /jobstate\.context/:
-          type = "checkpoint"
-          break
-
-        case /\.(log|stdout|stderr|o|out|e|err)$/:
-          type = "log"
-          break
-
-        case /te?mp/:
-          type = "temp"
-          break
-
-        default:
-          type = "other"
-          break
-      }
-
-      if (type == FILETYPE)
-        return 1
-
-      return 0
+    function fail(message) {
+      print message > "/dev/stderr"
+      exit 1
     }
 
-    {
-      file_path = $1
+    # Data sanity checking
+    NF < 11                       { fail("Invalid input data!") }
+    FILETYPE != "all" && NF != 12 { fail("Input data has not been preclassified!") }
+
+    # Set the filetype of each record
+    { file_type = (FILETYPE == "all") ? "all" : $12 }
+
+    # Aggregate on filetype match
+    file_type == FILETYPE {
       file_size = $2
       uid = $3
       gid = $4
@@ -162,17 +122,15 @@ main() {
       file_cost = FS_COST * (file_size / TiB) * ((SINCE - ctime) / yr)
 
       # Tally up
-      if (is_filetype(file_path)) {
-        inodes["user:" uid]++
-        inodes["group:" gid]++
+      inodes["user:" uid]++
+      inodes["group:" gid]++
 
-        size["user:" uid] += file_size
-        size["group:" gid] += file_size
+      size["user:" uid] += file_size
+      size["group:" gid] += file_size
 
-        if (file_cost > 0) {
-          cost["user:" uid] += file_cost
-          cost["group:" gid] += file_cost
-        }
+      if (file_cost > 0) {
+        cost["user:" uid] += file_cost
+        cost["group:" gid] += file_cost
       }
     }
 
