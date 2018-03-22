@@ -60,6 +60,9 @@ create_directories() {
 
 aggregate_data() {
   # TODO Aggregate data from source inputs
+  local output_dir="$1"
+  local base_time="$2"
+  local -a input_data=("${@:3}")
   true
 }
 
@@ -74,8 +77,11 @@ dispatch() {
 
   case "${mode}" in
     "__aggregate")
-      # TODO Options?
-      aggregate_data # etc.
+      local output_dir="$2"
+      local base_time="$3"
+      local -a input_data=("${@:4}")
+
+      aggregate_data "${output_dir}" "${base_time}" "${input_data[@]}"
       ;;
 
     "__compile")
@@ -91,7 +97,7 @@ dispatch() {
       if ! [[ -e "${output_dir}/aggregated_data" ]]; then
         if (( send_email )); then
           mail -s "Filesystem Report Generation Failed!" "${emails[@]}" <<-EOF
-					Filesystem report could not be generated! No aggregate data found.
+					Filesystem report could not be generated! No aggregated data found.
 					EOF
         fi
 
@@ -103,7 +109,10 @@ dispatch() {
 
       # Send completion e-mail
       if (( send_email )); then
-        mail -s "Filesystem Report Complete!" "${emails[@]}" <<-EOF
+        mail -s "Filesystem Report Complete!" \
+             -a "${output_dir}/report.pdf" \
+             "${emails[@]}" \
+        <<-EOF
 				Filesystem report is ready and available at: ${output_dir}/report.pdf
 				EOF
       fi
@@ -117,10 +126,7 @@ dispatch() {
       local output_dir="${PWD}"
       local base_time="$(date +"%s")"
       local -a emails=()
-      local -a lustre_data=()
-      local -a nfs_data=()
-      local -a warehouse_data=()
-      local -a irods_data=()
+      local -a input_data=()
       local -a lsf_aggregate_ops=()
       local -a lsf_compile_ops=()
 
@@ -149,47 +155,14 @@ dispatch() {
             shift
             ;;
 
-          "--lustre")
+          "--lustre" | "--nfs" | "--warehouse" | "--irods")
             value="$2"
             if ! [[ -e "${value}" ]]; then
               >&2 echo "No such input data \"${value}\"!"
               bad_options=1
             fi
 
-            lustre_data+=("${value}")
-            shift
-            ;;
-
-          "--nfs")
-            value="$2"
-            if ! [[ -e "${value}" ]]; then
-              >&2 echo "No such input data \"${value}\"!"
-              bad_options=1
-            fi
-
-            nfs_data+=("${value}")
-            shift
-            ;;
-
-          "--warehouse")
-            value="$2"
-            if ! [[ -e "${value}" ]]; then
-              >&2 echo "No such input data \"${value}\"!"
-              bad_options=1
-            fi
-
-            warehouse_data+=("${value}")
-            shift
-            ;;
-
-          "--irods")
-            value="$2"
-            if ! [[ -e "${value}" ]]; then
-              >&2 echo "No such input data \"${value}\"!"
-              bad_options=1
-            fi
-
-            irods_data+=("${value}")
+            input_data+=("${option:2}:${value}")
             shift
             ;;
 
@@ -212,7 +185,7 @@ dispatch() {
         shift
       done
 
-      if ! (( ${#lustre_data[@]} + ${#nfs_data[@]} + ${#warehouse_data[@]} + ${#irods_data[@]} )); then
+      if ! (( ${#input_data[@]} )); then
         >&2 echo "No filesystem input data specified!"
         bad_options=1
       fi
@@ -235,7 +208,7 @@ dispatch() {
       bsub "${lsf_aggregate_ops[@]-}" \
            -J "${aggregate_job_name}" \
            -o "${aggregate_log}" -e "${aggregate_log}" \
-           "${BINARY}" __aggregate "${output_dir}" # TODO Options?...
+           "${BINARY}" __aggregate "${output_dir}" "${base_time}" "${input_data[@]}"
 
       # Submit compilation job
       local compile_job_name="fs-report-compile-${job_id}"
