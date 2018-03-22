@@ -58,7 +58,8 @@ following fields:
 The aggregation script takes three optional, positional arguments:
 
 1. The filetype tag filter, defaulting to `all`. Note that if the input
-   data has not been preclassified by filetype, this process will fail.
+   data has not been preclassified by filetype, the aggregation step
+   will fail.
 2. The Unix time from which to base cost calculation, defaulting to the
    current system time.
 3. The filesystem type from which to base the cost calculation,
@@ -74,7 +75,13 @@ with an appropriate `pi` record, using `group-pi.map`:
     zcat foo.dat.gz | ./aggregate-mpistat.sh | ./map-to-pi.sh
 
 Note that this will not aggregate records by PI, it's strictly a mapping
-operation. Final aggregation can be done using the `merge-aggregates.sh`
+operation. It defines a third organisational tag, `pi`, in the
+aggregated output, where the organisation ID (third field) is the PI's
+Unix user ID (per the mapping definition).
+
+Final aggregation/merging can be done using the `merge-aggregates.sh`
 script:
 
     ./merge-aggregates.sh lustre01.all lustre01.cram lustre01-pi.cram
+
+This will produce the output data that drives report generation.
