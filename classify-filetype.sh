@@ -20,7 +20,7 @@ BINARY="$(readlink -fn "$0")"
 
 classify() {
   local input="$1"
-  cut -f1 "${input}" | sed 's/$/Cg==/' | base64 -di | awk '
+  cut -f1 "${input}" | sed 's/$/AA==/' | base64 -di | tr "\n\0" "X\n" | awk '
     /\.cram$/                                                  { print "cram"; next }
     /\.bam$/                                                   { print "bam"; next }
     /\.(crai|bai|sai|fai|csi)$/                                { print "index"; next }
