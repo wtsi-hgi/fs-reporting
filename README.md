@@ -90,7 +90,7 @@ This will produce the output data that drives report generation.
 
 To generate the aggregated data (i.e., running the complete pipeline
 outlined above) and compile the final report, a convenience script is
-available that will submit the jobs to an LFS cluster:
+available that will submit the jobs to an LSF cluster:
 
     generate.sh [--output DIRECTORY]
                 [--base TIME]
