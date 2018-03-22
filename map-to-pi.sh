@@ -5,16 +5,6 @@
 
 set -euo pipefail
 
-OS="$(uname -s)"
-if [[ "${OS}" == "Darwin" ]]; then
-  # Use GNU coreutils on macOS (for development/debugging)
-  shopt -s expand_aliases
-  alias readlink="greadlink"
-  alias sed="gsed"
-  alias sort="gsort"
-  alias join="gjoin"
-fi
-
 BINARY="$(readlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 MAPPING="${WORK_DIR}/group-pi.map"

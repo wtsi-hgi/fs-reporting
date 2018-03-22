@@ -5,20 +5,6 @@
 
 set -euo pipefail
 
-OS="$(uname -s)"
-if [[ "${OS}" == "Darwin" ]]; then
-  # Use GNU coreutils on macOS (for development/debugging)
-  shopt -s expand_aliases
-  alias readlink="greadlink"
-  alias mktemp="gmktemp"
-  alias cut="gcut"
-  alias sed="gsed"
-  alias base64="gbase64"
-  alias tr="gtr"
-  alias cat="gcat"
-  alias paste="gpaste"
-fi
-
 BINARY="$(readlink -fn "$0")"
 
 classify() {
