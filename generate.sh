@@ -14,6 +14,7 @@ if [[ "${OS}" == "Darwin" ]]; then
 fi
 
 BINARY="$(readlink -fn "$0")"
+BINDIR="$(dirname "${BINARY}")"
 
 usage() {
   cat <<-EOF
@@ -58,13 +59,85 @@ create_directories() {
   done
 }
 
+aggregate_fs_data() {
+  # Generate aggregated data for a particular filesystem type
+  local fs_type="$1"
+  local base_time="$2"
+
+  if (( $# == 2 )); then
+    # No data to process
+    return
+  fi
+
+  local -a input_data=("${@:3}")
+
+  zcat "${input_data[@]}" \
+  | "${BINDIR}/classify-filetype.sh" \
+  | tee >("${BINDIR}/aggregate-mpistat.sh" cram         "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" bam          "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" index        "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" compressed   "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" uncompressed "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" checkpoints  "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" logs         "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" temp         "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" other        "${base_time}" "${fs_type}") \
+  | "${BINDIR}/aggregate-mpistat.sh" all "${base_time}" "${fs_type}"
+}
+
 aggregate() {
   # Aggregate data from source inputs
   local output_dir="$1"
   local base_time="$2"
   local -a input_data=("${@:3}")
 
-  # TODO...
+  local -a lustre_data=()
+  local -a nfs_data=()
+  local -a warehouse_data=()
+  local -a irods_data=()
+
+  local data
+  local fs_type
+  local fs_data
+  for data in "${input_data[@]}"; do
+    fs_type="${data%%:*}"
+    fs_data="${data#*:}"
+
+    case "${fs_type}" in
+      "lustre")
+        lustre_data+=("${fs_data}");
+        ;;
+
+      "nfs")
+        nfs_data+=("${fs_data}");
+        ;;
+
+      "warehouse")
+        warehouse_data+=("${fs_data}")
+        ;;
+
+      "irods")
+        irods_data+=("${fs_data}")
+        ;;
+    esac
+  done
+
+  local data_dir="${output_dir}/data"
+
+  # Aggregate filesystem data files
+  aggregate_fs_data "lustre"    "${base_time}" "${lustre_data[@]-}"    > "${data_dir}/lustre"
+  aggregate_fs_data "nfs"       "${base_time}" "${nfs_data[@]-}"       > "${data_dir}/nfs"
+  aggregate_fs_data "warehouse" "${base_time}" "${warehouse_data[@]-}" > "${data_dir}/warehouse"
+  aggregate_fs_data "irods"     "${base_time}" "${irods_data[@]-}"     > "${data_dir}/irods"
+
+  # Map to PI
+  for fs_type in "lustre" "nfs" "warehouse" "irods"; do
+    data="${data_dir}/${fs_type}"
+    "${BINDIR}/map-to-pi.sh" < "${data}" > "${data}-pi"
+  done
+
+  # Merge everything into final output
+  "${BINDIR}/merge-aggregates.sh" "${data_dir}/"{lustre,nfs,warehouse,irods}{,pi} > "${data_dir}/aggregated"
 }
 
 compile() {
@@ -86,7 +159,7 @@ compile() {
 			EOF
     fi
 
-    >&2 echo "No aggregate data available to generate report!"
+    >&2 echo "No aggregated data available to generate report!"
     exit 1
   fi
 
