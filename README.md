@@ -28,6 +28,11 @@ Interested in:
 * Total size
 * Total cost, relative to `ctime`
 
+## Prerequisites
+
+* Bash 4.2, or higher
+* [teepot](https://github.com/wtsi-npg/teepot)
+
 ## Pipeline
 
 File paths in the `mpistat` data are base64 encoded. For aggregating by

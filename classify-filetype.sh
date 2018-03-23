@@ -31,7 +31,7 @@ main() {
   local input="$(mktemp)"
   trap "rm -rf ${input}" EXIT
 
-  tee "${input}" | paste - <(classify "${input}")
+  teepot "${input}" - | paste - <(classify "${input}")
 }
 
 main "$@"
