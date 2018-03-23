@@ -28,20 +28,10 @@ classify() {
 }
 
 main() {
-  case $# in
-    0)
-      local input="$(mktemp)"
-      trap "rm -rf ${input}" EXIT
+  local input="$(mktemp)"
+  trap "rm -rf ${input}" EXIT
 
-      cat > "${input}"
-      paste "${input}" <("${BINARY}" "${input}")
-      ;;
-
-    1)
-      local input="$1"
-      classify "${input}"
-      ;;
-  esac
+  tee "${input}" | paste - <(classify "${input}")
 }
 
 main "$@"
