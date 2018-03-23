@@ -58,64 +58,59 @@ create_directories() {
   done
 }
 
-aggregate_data() {
-  # TODO Aggregate data from source inputs
+aggregate() {
+  # Aggregate data from source inputs
   local output_dir="$1"
   local base_time="$2"
   local -a input_data=("${@:3}")
-  true
+
+  # TODO...
 }
 
-compile_report() {
-  # TODO Compile report from aggregated data
-  local aggregated_data="$1"
-  true
+compile() {
+  # Compile report from aggregated data
+  local output_dir="$1"
+  local aggregated_data="${output_dir}/data/aggregated"
+
+  local -a emails=()
+  local -i send_email=0
+  if (( $# > 1 )); then
+    emails=("${@:2}")
+    send_email=1
+  fi
+
+  if ! [[ -e "${aggregated_data}" ]]; then
+    if (( send_email )); then
+      mail -s "Filesystem Report Generation Failed!" "${emails[@]}" <<-EOF
+			Filesystem report could not be generated! No aggregated data found.
+			EOF
+    fi
+
+    >&2 echo "No aggregate data available to generate report!"
+    exit 1
+  fi
+
+  # TODO...
+
+  # Send completion e-mail
+  if (( send_email )); then
+    mail -s "Filesystem Report Complete!" \
+         -a "${output_dir}/report.pdf" \
+         "${emails[@]}" \
+    <<-EOF
+		Filesystem report is ready and available at: ${output_dir}/report.pdf
+		EOF
+  fi
 }
 
 dispatch() {
   local mode="${1-}"
 
   case "${mode}" in
-    "__aggregate")
-      local output_dir="$2"
-      local base_time="$3"
-      local -a input_data=("${@:4}")
-
-      aggregate_data "${output_dir}" "${base_time}" "${input_data[@]}"
-      ;;
-
-    "__compile")
-      local output_dir="$2"
-      local -a emails=()
-
-      local -i send_email=0
-      if (( $# > 2 )); then
-        emails=("${@:3}")
-        send_email=1
-      fi
-
-      if ! [[ -e "${output_dir}/aggregated_data" ]]; then
-        if (( send_email )); then
-          mail -s "Filesystem Report Generation Failed!" "${emails[@]}" <<-EOF
-					Filesystem report could not be generated! No aggregated data found.
-					EOF
-        fi
-
-        >&2 echo "No aggregate data available to generate report!"
-        exit 1
-      fi
-
-      compile_report "${output_dir}/aggregated_data"
-
-      # Send completion e-mail
-      if (( send_email )); then
-        mail -s "Filesystem Report Complete!" \
-             -a "${output_dir}/report.pdf" \
-             "${emails[@]}" \
-        <<-EOF
-				Filesystem report is ready and available at: ${output_dir}/report.pdf
-				EOF
-      fi
+    "__aggregate" | "__compile")
+      # Subcommand dispatch
+      local -a args=("${@:2}")
+      "${mode:2}" "${args[@]}"
       ;;
 
     *)
@@ -198,8 +193,10 @@ dispatch() {
 
       # Create working directory structure, if it doesn't exist
       local log_dir="${output_dir}/logs"
+      local data_dir="${output_dir}/data"
       create_directories "${output_dir}" \
-                         "${log_dir}"
+                         "${log_dir}" \
+                         "${data_dir}"
 
       # Submit aggregation job
       local job_id="${RANDOM}"
