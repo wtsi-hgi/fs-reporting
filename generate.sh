@@ -118,10 +118,14 @@ aggregate() {
   local data_dir="${output_dir}/data"
 
   # Aggregate filesystem data files
+  set +o pipefail
   aggregate_fs_data "lustre"    "${base_time}" "${lustre_data[@]-}"    > "${data_dir}/lustre"
   aggregate_fs_data "nfs"       "${base_time}" "${nfs_data[@]-}"       > "${data_dir}/nfs"
   aggregate_fs_data "warehouse" "${base_time}" "${warehouse_data[@]-}" > "${data_dir}/warehouse"
   aggregate_fs_data "irods"     "${base_time}" "${irods_data[@]-}"     > "${data_dir}/irods"
+  set -o pipefail
+
+  # TODO Make sure all aggregation writers have finished?...
 
   # Map to PI
   for fs_type in "lustre" "nfs" "warehouse" "irods"; do
