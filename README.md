@@ -50,7 +50,7 @@ following fields:
 2. Organisational tag (`group` or `user`)
 3. Organisational ID (Unix group ID or user ID)
 4. Filetype tag (`all`, `cram`, `bam`, `index`, `compressed`,
-   `uncompressed`, `checkpoints`, `logs`, `temp` or `other`)
+   `uncompressed`, `checkpoint`, `log`, `temp` or `other`)
 5. Total inodes
 6. Total size (bytes)
 7. Total cost since last changed (GBP)
