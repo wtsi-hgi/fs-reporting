@@ -119,10 +119,10 @@ aggregate() {
 
   # Aggregate filesystem data files
   set +o pipefail
-  aggregate_fs_data "lustre"    "${base_time}" "${lustre_data[@]-}"    > "${data_dir}/lustre"
-  aggregate_fs_data "nfs"       "${base_time}" "${nfs_data[@]-}"       > "${data_dir}/nfs"
-  aggregate_fs_data "warehouse" "${base_time}" "${warehouse_data[@]-}" > "${data_dir}/warehouse"
-  aggregate_fs_data "irods"     "${base_time}" "${irods_data[@]-}"     > "${data_dir}/irods"
+  aggregate_fs_data "lustre"    "${base_time}" "${lustre_data[@]+"${lustre_data[@]}"}"       > "${data_dir}/lustre"
+  aggregate_fs_data "nfs"       "${base_time}" "${nfs_data[@]+"${nfs_data[@]}"}"             > "${data_dir}/nfs"
+  aggregate_fs_data "warehouse" "${base_time}" "${warehouse_data[@]+"${warehouse_data[@]}"}" > "${data_dir}/warehouse"
+  aggregate_fs_data "irods"     "${base_time}" "${irods_data[@]+"${irods_data[@]}"}"         > "${data_dir}/irods"
   set -o pipefail
 
   # TODO Make sure all aggregation writers have finished?...
@@ -272,7 +272,7 @@ dispatch() {
       local job_id="${RANDOM}"
       local aggregate_job_name="fs-report-aggregate-${job_id}"
       local aggregate_log="${log_dir}/aggregate-${job_id}.log"
-      bsub "${lsf_aggregate_ops[@]-}" \
+      bsub "${lsf_aggregate_ops[@]+"${lsf_aggregate_ops[@]}"}" \
            -J "${aggregate_job_name}" \
            -o "${aggregate_log}" -e "${aggregate_log}" \
            "${BINARY}" __aggregate "${output_dir}" "${base_time}" "${input_data[@]}"
@@ -280,11 +280,11 @@ dispatch() {
       # Submit compilation job
       local compile_job_name="fs-report-compile-${job_id}"
       local compile_log="${log_dir}/compile-${job_id}.log"
-      bsub "${lsf_compile_ops[@]-}" \
+      bsub "${lsf_compile_ops[@]+"${lsf_compile_ops[@]}"}" \
            -J "${compile_job_name}" \
            -w "ended(${aggregate_job_name})" \
            -o "${compile_log}" -e "${compile_log}" \
-           "${BINARY}" __compile "${output_dir}" "${emails[@]-}"
+           "${BINARY}" __compile "${output_dir}" "${emails[@]+"${emails[@]}"}"
       ;;
   esac
 }
