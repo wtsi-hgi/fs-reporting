@@ -65,7 +65,8 @@ aggregate_fs_data() {
 
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | tee >("${BINDIR}/aggregate-mpistat.sh" cram         "${base_time}" "${fs_type}") \
+  | tee >("${BINDIR}/aggregate-mpistat.sh" all          "${base_time}" "${fs_type}") \
+        >("${BINDIR}/aggregate-mpistat.sh" cram         "${base_time}" "${fs_type}") \
         >("${BINDIR}/aggregate-mpistat.sh" bam          "${base_time}" "${fs_type}") \
         >("${BINDIR}/aggregate-mpistat.sh" index        "${base_time}" "${fs_type}") \
         >("${BINDIR}/aggregate-mpistat.sh" compressed   "${base_time}" "${fs_type}") \
@@ -74,7 +75,7 @@ aggregate_fs_data() {
         >("${BINDIR}/aggregate-mpistat.sh" log          "${base_time}" "${fs_type}") \
         >("${BINDIR}/aggregate-mpistat.sh" temp         "${base_time}" "${fs_type}") \
         >("${BINDIR}/aggregate-mpistat.sh" other        "${base_time}" "${fs_type}") \
-  | "${BINDIR}/aggregate-mpistat.sh" all "${base_time}" "${fs_type}"
+        >/dev/null
 }
 
 aggregate() {
