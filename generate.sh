@@ -134,7 +134,7 @@ aggregate() {
   done
 
   # Merge everything into final output
-  "${BINDIR}/merge-aggregates.sh" "${data_dir}/"{lustre,nfs,warehouse,irods}{,pi} > "${data_dir}/aggregated"
+  "${BINDIR}/merge-aggregates.sh" "${data_dir}/"{lustre,nfs,warehouse,irods}{,-pi} > "${data_dir}/aggregated"
 }
 
 compile() {
