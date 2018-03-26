@@ -44,11 +44,7 @@ aggregate_fs_data() {
   # Generate aggregated data for a particular filesystem type
   local fs_type="$1"
   local base_time="$2"
-
-  if (( $# == 2 )); then
-    # No data to process
-    return
-  fi
+  local -a input_data=("${@:3}")
 
   # Synchronising tee'd processes is a PITA
   local lock_dir="$(mktemp -d)"
@@ -59,8 +55,6 @@ aggregate_fs_data() {
     "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
     touch "${lock_dir}/${filetype}"
   }
-
-  local -a input_data=("${@:3}")
 
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
@@ -79,7 +73,7 @@ aggregate_fs_data() {
   while (( $(find "${lock_dir}" -type f | wc -l) < 10 )); do
     find "${lock_dir}" -type f -exec basename {} \; \
     | paste -sd" " \
-    | sed 's/.*/Finished &; waiting for rest...' >&2
+    | sed 's/.*/Finished &; waiting for rest.../' >&2
     sleep 10
   done
   rm -rf "${lock_dir}"
@@ -124,15 +118,26 @@ aggregate() {
 
   local data_dir="${output_dir}/data"
 
+  __aggregate() {
+    # Convenience wrapper
+    local fs_type="$1"
+
+    if (( $# == 1 )); then
+      # No data to process
+      return
+    fi
+    local -a data_files=("${@:2}")
+
+    aggregate_fs_data "${fs_type}" "${data_files[@]}" > "${data_dir}/${fs_type}"
+  }
+
   # Aggregate filesystem data files
   set +o pipefail
-  aggregate_fs_data "lustre"    "${base_time}" "${lustre_data[@]+"${lustre_data[@]}"}"       > "${data_dir}/lustre"
-  aggregate_fs_data "nfs"       "${base_time}" "${nfs_data[@]+"${nfs_data[@]}"}"             > "${data_dir}/nfs"
-  aggregate_fs_data "warehouse" "${base_time}" "${warehouse_data[@]+"${warehouse_data[@]}"}" > "${data_dir}/warehouse"
-  aggregate_fs_data "irods"     "${base_time}" "${irods_data[@]+"${irods_data[@]}"}"         > "${data_dir}/irods"
+  __aggregate "lustre"    "${lustre_data[@]+"${lustre_data[@]}"}"
+  __aggregate "nfs"       "${nfs_data[@]+"${nfs_data[@]}"}"
+  __aggregate "warehouse" "${warehouse_data[@]+"${warehouse_data[@]}"}"
+  __aggregate "irods"     "${irods_data[@]+"${irods_data[@]}"}"
   set -o pipefail
-
-  # TODO Make sure all aggregation writers have finished?...
 
   # Map to PI
   for fs_type in "lustre" "nfs" "warehouse" "irods"; do
