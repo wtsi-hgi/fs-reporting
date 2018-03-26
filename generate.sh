@@ -45,25 +45,38 @@ aggregate_fs_data() {
   local fs_type="$1"
   local base_time="$2"
 
+  local lock="$(mktemp)"
+
   if (( $# == 2 )); then
     # No data to process
     return
   fi
 
+  __aggregate_stream() {
+    # Aggregate the classified data stream
+    local filetype="$1"
+    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
+    echo "${filetype} done" > "${lock}"
+  }
+
   local -a input_data=("${@:3}")
 
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot >("${BINDIR}/aggregate-mpistat.sh" all          "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" cram         "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" bam          "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" index        "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" compressed   "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" uncompressed "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" checkpoint   "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" log          "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" temp         "${base_time}" "${fs_type}") \
-           >("${BINDIR}/aggregate-mpistat.sh" other        "${base_time}" "${fs_type}")
+  | teepot -v >(__aggregate_stream all) \
+              >(__aggregate_stream cram) \
+              >(__aggregate_stream bam) \
+              >(__aggregate_stream index) \
+              >(__aggregate_stream compressed) \
+              >(__aggregate_stream uncompressed) \
+              >(__aggregate_stream checkpoint) \
+              >(__aggregate_stream log) \
+              >(__aggregate_stream temp) \
+              >(__aggregate_stream other)
+
+  # Block on barrier condition
+  while (( $(wc -l "${lock}") < 10 )); do sleep 1; done
+  rm -rf "${lock}"
 }
 
 aggregate() {
