@@ -119,8 +119,8 @@ aggregate() {
   local data
   for fs_type in "lustre" "nfs" "warehouse" "irods"; do
     data="${data_dir}/${fs_type}"
-    __aggregate "${fs_type}" > "${data}"
-    "${BINDIR}/map-to-pi.sh" < "${data}" > "${data}-pi"
+    __aggregate "${fs_type}" \
+    | teepot >("${BINDIR}/map-to-pi.sh" > "${data}-pi") "${data}"
   done
   set -o pipefail
 
