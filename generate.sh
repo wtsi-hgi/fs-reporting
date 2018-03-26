@@ -112,7 +112,7 @@ aggregate() {
       return
     fi
 
-    aggregate_fs_data "${fs_type}" "${fs_data[@]}"
+    aggregate_fs_data "${fs_type}" "${base_time}" "${fs_data[@]}"
   }
 
   # Aggregate filesystem data files and map to PI
