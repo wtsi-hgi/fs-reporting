@@ -3,7 +3,7 @@
 # Generate data and compile report
 # Christopher Harrison <ch12@sanger.ac.uk>
 
-set -euxo pipefail
+set -euo pipefail
 
 BINARY="$(readlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
@@ -50,8 +50,8 @@ aggregate_fs_data() {
     return
   fi
 
+  # Synchronising tee'd processes is a PITA
   local lock_dir="$(mktemp -d)"
-  >&2 echo "lock dir $lock_dir"
 
   __aggregate_stream() {
     # Aggregate the preclassified data stream
@@ -62,7 +62,7 @@ aggregate_fs_data() {
 
   local -a input_data=("${@:3}")
 
-  zcat "${input_data[@]}" | head -n1000 \
+  zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
   | teepot -vv >(__aggregate_stream all) \
                >(__aggregate_stream cram) \
@@ -77,11 +77,12 @@ aggregate_fs_data() {
 
   # Block on barrier condition
   while (( $(find "${lock_dir}" -type f | wc -l) < 10 )); do
-    #paste -sd" " "${lock}" | sed 's/.*/Finished &; waiting for rest...' >&2
-    echo "Waiting..." >&2
-    sleep 60
+    find "${lock_dir}" -type f -exec basename {} \; \
+    | paste -sd" " \
+    | sed 's/.*/Finished &; waiting for rest...' >&2
+    sleep 10
   done
-  #rm -rf "${lock}"
+  rm -rf "${lock_dir}"
 }
 
 aggregate() {
