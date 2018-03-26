@@ -72,10 +72,12 @@ aggregate_fs_data() {
            >(__aggregate_stream other)
 
   # Block on barrier condition
-  while (( $(find "${lock_dir}" -type f | wc -l) < 10 )); do
-    find "${lock_dir}" -type f -exec basename {} \; \
-    | paste -sd" " \
-    | sed 's/.*/Finished &; waiting for rest.../' >&2
+  local -i num_done
+  while :; do
+    num_done="$(find "${lock_dir}" -type f | wc -l)"
+    (( num_done == 10 )) && break
+
+    >&2 echo "Finished ${num_done} of 10 ${fs_type} aggregations..."
     sleep 10
   done
   rm -rf "${lock_dir}"
@@ -88,6 +90,9 @@ aggregate() {
   local -a input_data=("${@:3}")
 
   local data_dir="${output_dir}/data"
+
+  >&2 echo "Aggregated data will be written to ${data_dir}"
+  >&2 echo "Cost calculations will be based to $(date -d "@${base_time}")"
 
   __aggregate() {
     # Convenience wrapper that extracts the relevant filesystem data
