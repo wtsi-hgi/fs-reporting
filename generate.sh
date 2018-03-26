@@ -3,7 +3,7 @@
 # Generate data and compile report
 # Christopher Harrison <ch12@sanger.ac.uk>
 
-set -euo pipefail
+set -euxo pipefail
 
 BINARY="$(readlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
@@ -45,38 +45,43 @@ aggregate_fs_data() {
   local fs_type="$1"
   local base_time="$2"
 
-  local lock="$(mktemp)"
-
   if (( $# == 2 )); then
     # No data to process
     return
   fi
 
+  local lock_dir="$(mktemp -d)"
+  >&2 echo "lock dir $lock_dir"
+
   __aggregate_stream() {
-    # Aggregate the classified data stream
+    # Aggregate the preclassified data stream
     local filetype="$1"
     "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
-    echo "${filetype} done" > "${lock}"
+    touch "${lock_dir}/${filetype}"
   }
 
   local -a input_data=("${@:3}")
 
-  zcat "${input_data[@]}" \
+  zcat "${input_data[@]}" | head -n1000 \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot -v >(__aggregate_stream all) \
-              >(__aggregate_stream cram) \
-              >(__aggregate_stream bam) \
-              >(__aggregate_stream index) \
-              >(__aggregate_stream compressed) \
-              >(__aggregate_stream uncompressed) \
-              >(__aggregate_stream checkpoint) \
-              >(__aggregate_stream log) \
-              >(__aggregate_stream temp) \
-              >(__aggregate_stream other)
+  | teepot -vv >(__aggregate_stream all) \
+               >(__aggregate_stream cram) \
+               >(__aggregate_stream bam) \
+               >(__aggregate_stream index) \
+               >(__aggregate_stream compressed) \
+               >(__aggregate_stream uncompressed) \
+               >(__aggregate_stream checkpoint) \
+               >(__aggregate_stream log) \
+               >(__aggregate_stream temp) \
+               >(__aggregate_stream other)
 
   # Block on barrier condition
-  while (( $(wc -l "${lock}") < 10 )); do sleep 1; done
-  rm -rf "${lock}"
+  while (( $(find "${lock_dir}" -type f | wc -l) < 10 )); do
+    #paste -sd" " "${lock}" | sed 's/.*/Finished &; waiting for rest...' >&2
+    echo "Waiting..." >&2
+    sleep 60
+  done
+  #rm -rf "${lock}"
 }
 
 aggregate() {
