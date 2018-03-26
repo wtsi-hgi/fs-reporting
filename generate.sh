@@ -52,22 +52,24 @@ aggregate_fs_data() {
   __aggregate_stream() {
     # Aggregate the preclassified data stream
     local filetype="$1"
+    >&2 echo "Aggregating ${filetype} data for ${fs_type}..."
     "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
     touch "${lock_dir}/${filetype}"
+    >&2 echo "Completed ${filetype} aggregation for ${fs_type}"
   }
 
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot -vv >(__aggregate_stream all) \
-               >(__aggregate_stream cram) \
-               >(__aggregate_stream bam) \
-               >(__aggregate_stream index) \
-               >(__aggregate_stream compressed) \
-               >(__aggregate_stream uncompressed) \
-               >(__aggregate_stream checkpoint) \
-               >(__aggregate_stream log) \
-               >(__aggregate_stream temp) \
-               >(__aggregate_stream other)
+  | teepot >(__aggregate_stream all) \
+           >(__aggregate_stream cram) \
+           >(__aggregate_stream bam) \
+           >(__aggregate_stream index) \
+           >(__aggregate_stream compressed) \
+           >(__aggregate_stream uncompressed) \
+           >(__aggregate_stream checkpoint) \
+           >(__aggregate_stream log) \
+           >(__aggregate_stream temp) \
+           >(__aggregate_stream other)
 
   # Block on barrier condition
   while (( $(find "${lock_dir}" -type f | wc -l) < 10 )); do
@@ -125,7 +127,9 @@ aggregate() {
   set -o pipefail
 
   # Merge everything into final output
+  >&2 echo "Merging all aggregated data together..."
   "${BINDIR}/merge-aggregates.sh" "${data_dir}/"{lustre,nfs,warehouse,irods}{,-pi} > "${data_dir}/aggregated"
+  >&2 echo "All done :)"
 }
 
 compile() {
