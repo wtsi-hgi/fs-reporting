@@ -85,65 +85,44 @@ aggregate() {
   local base_time="$2"
   local -a input_data=("${@:3}")
 
-  local -a lustre_data=()
-  local -a nfs_data=()
-  local -a warehouse_data=()
-  local -a irods_data=()
-
-  local data
-  local fs_type
-  local fs_data
-  for data in "${input_data[@]}"; do
-    fs_type="${data%%:*}"
-    fs_data="${data#*:}"
-
-    case "${fs_type}" in
-      "lustre")
-        lustre_data+=("${fs_data}");
-        ;;
-
-      "nfs")
-        nfs_data+=("${fs_data}");
-        ;;
-
-      "warehouse")
-        warehouse_data+=("${fs_data}")
-        ;;
-
-      "irods")
-        irods_data+=("${fs_data}")
-        ;;
-    esac
-  done
-
   local data_dir="${output_dir}/data"
 
   __aggregate() {
-    # Convenience wrapper
+    # Convenience wrapper that extracts the relevant filesystem data
+    # files and then submits them to the aggregator
     local fs_type="$1"
+    local -a fs_data=()
 
-    if (( $# == 1 )); then
+    local data
+    local e_fs_type
+    local e_fs_data
+    for data in "${input_data[@]}"; do
+      e_fs_type="${data%%:*}"
+      e_fs_data="${data#*:}"
+
+      if [[ "${e_fs_type}" == "${fs_type}" ]]; then
+        fs_data+=("${e_fs_data}")
+      fi
+    done
+
+    if ! (( ${#fs_data[@]} )); then
       # No data to process
       return
     fi
-    local -a data_files=("${@:2}")
 
-    aggregate_fs_data "${fs_type}" "${data_files[@]}" > "${data_dir}/${fs_type}"
+    aggregate_fs_data "${fs_type}" "${fs_data[@]}"
   }
 
-  # Aggregate filesystem data files
+  # Aggregate filesystem data files and map to PI
   set +o pipefail
-  __aggregate "lustre"    "${lustre_data[@]+"${lustre_data[@]}"}"
-  __aggregate "nfs"       "${nfs_data[@]+"${nfs_data[@]}"}"
-  __aggregate "warehouse" "${warehouse_data[@]+"${warehouse_data[@]}"}"
-  __aggregate "irods"     "${irods_data[@]+"${irods_data[@]}"}"
-  set -o pipefail
-
-  # Map to PI
+  local fs_type
+  local data
   for fs_type in "lustre" "nfs" "warehouse" "irods"; do
     data="${data_dir}/${fs_type}"
+    __aggregate "${fs_type}" > "${data}"
     "${BINDIR}/map-to-pi.sh" < "${data}" > "${data}-pi"
   done
+  set -o pipefail
 
   # Merge everything into final output
   "${BINDIR}/merge-aggregates.sh" "${data_dir}/"{lustre,nfs,warehouse,irods}{,-pi} > "${data_dir}/aggregated"
