@@ -40,17 +40,6 @@ usage() {
 	EOF
 }
 
-create_directories() {
-  # Create directories, if they don't already exist
-  local -a dirs=("$@")
-
-  for dir in "${dirs[@]}"; do
-    if ! [[ -d "${dir}" ]]; then
-      mkdir -p "${dir}"
-    fi
-  done
-}
-
 aggregate_fs_data() {
   # Generate aggregated data for a particular filesystem type
   local fs_type="$1"
@@ -263,9 +252,7 @@ dispatch() {
       # Create working directory structure, if it doesn't exist
       local log_dir="${output_dir}/logs"
       local data_dir="${output_dir}/data"
-      create_directories "${output_dir}" \
-                         "${log_dir}" \
-                         "${data_dir}"
+      mkdir -p "${output_dir}" "${log_dir}" "${data_dir}"
 
       # Submit aggregation job
       local job_id="${RANDOM}"
