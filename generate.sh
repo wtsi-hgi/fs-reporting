@@ -48,6 +48,8 @@ aggregate_fs_data() {
 
   # Synchronising tee'd processes is a PITA
   local lock_dir="$(mktemp -d)"
+  local tmp_dir="$(mktemp -d)"
+  >&2 echo "${tmp_dir}"
 
   __aggregate_stream() {
     # Aggregate the preclassified data stream
@@ -60,16 +62,16 @@ aggregate_fs_data() {
 
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot >(__aggregate_stream all) \
-           >(__aggregate_stream cram) \
-           >(__aggregate_stream bam) \
-           >(__aggregate_stream index) \
-           >(__aggregate_stream compressed) \
-           >(__aggregate_stream uncompressed) \
-           >(__aggregate_stream checkpoint) \
-           >(__aggregate_stream log) \
-           >(__aggregate_stream temp) \
-           >(__aggregate_stream other)
+  | teepot >(__aggregate_stream all | tee "${tmp_dir}/all") \
+           >(__aggregate_stream cram | tee "${tmp_dir}/cram") \
+           >(__aggregate_stream bam | tee "${tmp_dir}/bam") \
+           >(__aggregate_stream index | tee "${tmp_dir}/index") \
+           >(__aggregate_stream compressed | tee "${tmp_dir}/compressed") \
+           >(__aggregate_stream uncompressed | tee "${tmp_dir}/uncompressed") \
+           >(__aggregate_stream checkpoint | tee "${tmp_dir}/checkpoint") \
+           >(__aggregate_stream log | tee "${tmp_dir}/log") \
+           >(__aggregate_stream temp | tee "${tmp_dir}/temp") \
+           >(__aggregate_stream other | tee "${tmp_dir}/other")
 
   # Block on barrier condition
   local -i num_done
