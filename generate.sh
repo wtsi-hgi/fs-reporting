@@ -58,6 +58,8 @@ aggregate_fs_data() {
     >&2 echo "Completed ${filetype} aggregation for ${fs_type}"
   }
 
+  # FIXME Something is wrong here: The stdout of the __aggregate_stream
+  # processes aren't ending up together at the end...
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
   | teepot >(__aggregate_stream all) \
@@ -72,14 +74,7 @@ aggregate_fs_data() {
            >(__aggregate_stream other)
 
   # Block on barrier condition
-  local -i num_done
-  while :; do
-    num_done="$(find "${lock_dir}" -type f | wc -l)"
-    (( num_done == 10 )) && break
-
-    >&2 echo "Finished ${num_done} of 10 ${fs_type} aggregations..."
-    sleep 10
-  done
+  while (( $(find "{lock_dir}" -type f | wc -l) < 10 )); do sleep 10; done
   rm -rf "${lock_dir}"
 }
 
