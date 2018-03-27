@@ -75,7 +75,7 @@ in `get-fs-cost.sh`.
 
 Aggregated data can be mapped to PI by running it through `map-to-pi.sh`.
 This script strips out any `user` records and replaces `group` records
-with an appropriate `pi` record, using `group-pi.map`:
+with an appropriate `pi` record, using `gid-pi_uid.map`:
 
     zcat foo.dat.gz | ./aggregate-mpistat.sh | ./map-to-pi.sh
 
@@ -92,6 +92,11 @@ script:
 This will produce the output data that drives report generation.
 
 ## tl;dr
+
+Sanger-specific mappings can be produced using `create-mappings.sh`,
+which takes an optional `--force` parameter to overwrite the mappings
+that already exist. Note that this script relies on heuristics and its
+outputs may need manual curation.
 
 To generate the aggregated data (i.e., running the complete pipeline
 outlined above) and compile the final report, a convenience script is
