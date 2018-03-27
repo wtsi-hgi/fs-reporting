@@ -1,0 +1,2 @@
+# Unix group ID to human readable group mapping
+# Tab-delimited, one-record per line: <GID>\t<Group Name>
