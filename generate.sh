@@ -70,16 +70,16 @@ aggregate_fs_data() {
   # semaphore to block until all the aggregators have finished.
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot >(__aggregate_stream all          >> "${output}") \
-           >(__aggregate_stream cram         >> "${output}") \
-           >(__aggregate_stream bam          >> "${output}") \
-           >(__aggregate_stream index        >> "${output}") \
-           >(__aggregate_stream compressed   >> "${output}") \
-           >(__aggregate_stream uncompressed >> "${output}") \
-           >(__aggregate_stream checkpoint   >> "${output}") \
-           >(__aggregate_stream log          >> "${output}") \
-           >(__aggregate_stream temp         >> "${output}") \
-           >(__aggregate_stream other        >> "${output}")
+  | teepot >(__aggregate_stream all          | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream cram         | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream bam          | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream index        | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream compressed   | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream uncompressed | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream checkpoint   | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream log          | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream temp         | tee -a "${output}" >/dev/null &) \
+           >(__aggregate_stream other        | tee -a "${output}" >/dev/null &)
 
   # Block on semaphore files before streaming output to stdout
   while (( $(find "${temp_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
