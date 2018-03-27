@@ -5,21 +5,18 @@
 
 set -euo pipefail
 
-BINARY="$(readlink -fn "$0")"
+BINARY="$(greadlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
+
+source "${WORK_DIR}/get-mapping.sh"
 MAPPING="${WORK_DIR}/group-pi.map"
 
 TAB="	"
 
-get_mapping() {
-  # Return sorted mapping with comments and blanks stripped out
-  sed '/^\s*#/d;/^\s*$/d;s/\s*#.*//' "${MAPPING}" | sort -t"${TAB}" -k1n,1
-}
-
 main() {
   awk -F"${TAB}" '$2 == "group" { print }' \
   | sort -t"${TAB}" -k3n,3 \
-  | join -t"${TAB}" -1 3 -2 1  - <(get_mapping) \
+  | join -t"${TAB}" -13 -21 - <(get_mapping "${MAPPING}") \
   | awk 'BEGIN { FS = OFS = "\t" } { print $2, "pi", $8, $4, $5, $6, $7 }'
 }
 
