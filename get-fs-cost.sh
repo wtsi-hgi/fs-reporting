@@ -1,13 +1,14 @@
 # Get filesystem cost per terabyte year
 # Christopher Harrison <ch12@sanger.ac.uk>
 
+# Average cost across filesystem types is approximately £75/TiB Year;
+# FastNFS is slightly more expensive than Lustre and iRODS is multiplied
+# by the approximate average number of replicas (i.e., 2)
 declare -A _FS_COSTS=(
-  [lustre]="150"
-
-  # TODO Find costs
-  # [nfs]=...
-  # [warehouse]=...
-  # [irods]=...
+  [lustre]="75"
+  [nfs]="75"
+  [warehouse]="75"
+  [irods]="150"
 )
 
 get_fs_cost() {
