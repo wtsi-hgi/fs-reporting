@@ -9,7 +9,7 @@ BINARY="$(readlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 
 source "${WORK_DIR}/get-mapping.sh"
-MAPPING="${WORK_DIR}/group-pi.map"
+MAPPING="${WORK_DIR}/gid-pi_uid.map"
 
 TAB="	"
 
