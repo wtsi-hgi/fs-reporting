@@ -47,19 +47,28 @@ aggregate_fs_data() {
   local -a input_data=("${@:3}")
 
   # Synchronising tee'd processes is a PITA
-  local lock_dir="$(mktemp -d)"
+  local temp_dir="$(mktemp -d)"
+  local output="${temp_dir}/output"
+  mkfifo "${output}"
 
   __aggregate_stream() {
     # Aggregate the preclassified data stream
     local filetype="$1"
-    >&2 echo "Aggregating ${filetype} files for ${fs_type}..."
-    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
-    touch "${lock_dir}/${filetype}"
+
+    local lock="${temp_dir}/${filetype}.lock"
+    touch "${lock}"
+
+    >&2 echo "Aggregating ${filetype} file statistics for ${fs_type}..."
+    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}" >> "${output}"
     >&2 echo "Completed ${filetype} aggregation for ${fs_type}"
+
+    rm -rf "${lock}"
   }
 
-  # FIXME Something is wrong here: The stdout of the __aggregate_stream
-  # processes aren't ending up together at the end...
+  # NOTE Bash gets into a race condition here, if one expects the output
+  # of all the substituted processes to write to the same stdout. To get
+  # around this, we append to a named pipe (see above) and use an ad hoc
+  # semaphore to block until all the aggregators have finished.
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
   | teepot >(__aggregate_stream all) \
@@ -73,9 +82,10 @@ aggregate_fs_data() {
            >(__aggregate_stream temp) \
            >(__aggregate_stream other)
 
-  # Block on barrier condition
-  while (( $(find "{lock_dir}" -type f | wc -l) < 10 )); do sleep 10; done
-  rm -rf "${lock_dir}"
+  # Block on semaphore files while reading from output pipe
+  while (( $(find "${temp_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
+  cat "${output}"
+  rm -rf "${temp_dir}"
 }
 
 aggregate() {
