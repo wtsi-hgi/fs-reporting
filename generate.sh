@@ -49,7 +49,6 @@ aggregate_fs_data() {
   # Synchronising tee'd processes is a PITA
   local temp_dir="$(mktemp -d)"
   local output="${temp_dir}/output"
-  mkfifo "${output}"
 
   __aggregate_stream() {
     # Aggregate the preclassified data stream
@@ -59,7 +58,7 @@ aggregate_fs_data() {
     touch "${lock}"
 
     >&2 echo "Aggregating ${filetype} file statistics for ${fs_type}..."
-    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}" >> "${output}"
+    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
     >&2 echo "Completed ${filetype} aggregation for ${fs_type}"
 
     rm -rf "${lock}"
@@ -67,22 +66,22 @@ aggregate_fs_data() {
 
   # NOTE Bash gets into a race condition here, if one expects the output
   # of all the substituted processes to write to the same stdout. To get
-  # around this, we append to a named pipe (see above) and use an ad hoc
+  # around this, we append to a temporary output file and use an ad hoc
   # semaphore to block until all the aggregators have finished.
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot >(__aggregate_stream all) \
-           >(__aggregate_stream cram) \
-           >(__aggregate_stream bam) \
-           >(__aggregate_stream index) \
-           >(__aggregate_stream compressed) \
-           >(__aggregate_stream uncompressed) \
-           >(__aggregate_stream checkpoint) \
-           >(__aggregate_stream log) \
-           >(__aggregate_stream temp) \
-           >(__aggregate_stream other)
+  | teepot >(__aggregate_stream all          >> "${output}") \
+           >(__aggregate_stream cram         >> "${output}") \
+           >(__aggregate_stream bam          >> "${output}") \
+           >(__aggregate_stream index        >> "${output}") \
+           >(__aggregate_stream compressed   >> "${output}") \
+           >(__aggregate_stream uncompressed >> "${output}") \
+           >(__aggregate_stream checkpoint   >> "${output}") \
+           >(__aggregate_stream log          >> "${output}") \
+           >(__aggregate_stream temp         >> "${output}") \
+           >(__aggregate_stream other        >> "${output}")
 
-  # Block on semaphore files while reading from output pipe
+  # Block on semaphore files before streaming output to stdout
   while (( $(find "${temp_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
   cat "${output}"
   rm -rf "${temp_dir}"
