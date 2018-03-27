@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-BINARY="$(greadlink -fn "$0")"
+BINARY="$(readlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 
 source "${WORK_DIR}/get-mapping.sh"
