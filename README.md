@@ -1,6 +1,6 @@
 # Filesystem Reporting
 
-Grouped by:
+Generate reports and visualisations of filesystem usage, grouped by:
 
 * Filesystem
   * Lustre
@@ -22,10 +22,10 @@ Grouped by:
   * Temporary (`*{tmp,temp}*`)
   * Other (everything else)
 
-Interested in:
+Specifically, we are interested in:
 
 * Total inodes
-* Total size
+* Total size of data
 * Total cost, relative to `ctime`
 
 ## Prerequisites
