@@ -95,7 +95,7 @@ create_pi_mapping() {
   local potential_pis
   local -i num_pis
   for group in "${HUMGEN_GRPS[@]}"; do
-    gid="$(getent group "${group}" | cut -f: -d3)"
+    gid="$(getent group "${group}" | cut -d: -f3)"
 
     for user_type in "owner" "member"; do
       potential_pis="$(get_group_users "${group}" "${user_type}")"
