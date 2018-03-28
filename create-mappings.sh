@@ -5,10 +5,10 @@
 
 set -euo pipefail
 
-BINARY="$(readlink -fn "$0")"
+BINARY="$(greadlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 
-declare -a GROUPS=(
+declare -a HUMGEN_GRPS=(
   # Human Genetics Programme Unix groups
   # Loosely derived from LSF config, as of 2018-03-28
   adpdcrispr adrp1 afd_trios afr100k agv aiexomes ameliaqt amish-coreex
@@ -55,16 +55,77 @@ declare -a GROUPS=(
   www-t143 yemen_chad_geno yo-psc y_phylogeny_de zuluds zulu_wgs
 )
 
-declare -a PIS=(
+declare -a HUMGEN_PIS=(
   # Human Genetics Programme PIs
   ca3 cts em13 ez1 ib1 kj2 meh ms23 ns6  # Current
   ap8 jb26 panos rd rm2                  # Past
 )
 
+PI_REGEX="$(printf '%s\n' "${HUMGEN_PIS[@]}" | paste -sd"|" -)"
+
+get_group_users() {
+  local group="$1"
+  local user_type="$2"
+
+  local users="$(
+    ldapsearch -xLLL -s base -b "cn=${group},ou=group,dc=sanger,dc=ac,dc=uk" "${user_type}" \
+    | awk -v TYPE="${user_type}" 'BEGIN { FS = ": |[,=]" } $1 == TYPE { print $3 }' \
+    | (grep -E "${PI_REGEX}" || true)
+  )"
+
+  local -i count
+  if [[ -z "${users}" ]]; then
+    count=0
+    echo "0"
+  else
+    count="$(wc -l <<< "${users}")"
+    echo "${users}" | xargs echo "${count}"
+  fi
+}
+
 create_pi_mapping() {
   # Create group to PI user ID mapping from LDAP and heuristics
-  # TODO
-  true
+  local -i needs_intervention=0
+
+  local group
+  local gid
+  local user
+  local uid
+  local user_type
+  local potential_pis
+  local -i num_pis
+  for group in "${HUMGEN_GRPS[@]}"; do
+    gid="$(getent group "${group}" | cut -f: -d3)"
+
+    for user_type in "owner" "member"; do
+      potential_pis="$(get_group_users "${group}" "${user_type}")"
+      num_pis="$(cut -d" " -f1 <<< "${potential_pis}")"
+      if (( num_pis )); then
+        break
+      fi
+    done
+
+    if (( num_pis == 1 )); then
+      # One PI is easy to deal with
+      local user="$(cut -d" " -f2 <<< "${potential_pis}")"
+      local uid="$(getent passwd "${user}" | cut -d: -f3)"
+      echo "${gid}	${uid}  # ${group}: ${user}"
+
+    elif (( num_pis > 1 )); then
+      # Multiple PIs needs manual intervention
+      needs_intervention+=1
+      echo "${gid}	??  # ${group}: $(cut -d" " -f2- <<< "${potential_pis}")"
+
+    else
+      # No potential PIs found :(
+      needs_intervention+=1
+      echo "${gid}	??  # ${group}: No potential PIs"
+    fi
+  done
+
+  if (( needs_intervention )); then
+    >&2 echo "FIXME: Couldn't map ${needs_intervention} groups to their PI!"
+  fi
 }
 
 create_user_mapping() {
@@ -75,7 +136,7 @@ create_user_mapping() {
 create_group_mapping() {
   # Create group mapping from the group database,
   # restricted to predefined humgen groups
-  getent group "${GROUPS[@]}" | awk 'BEGIN { FS = ":"; OFS = "\t" } { print $3, $1 }'
+  getent group "${HUMGEN_GRPS[@]}" | awk 'BEGIN { FS = ":"; OFS = "\t" } { print $3, $1 }'
 }
 
 main() {
