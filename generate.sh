@@ -49,6 +49,7 @@ aggregate_fs_data() {
   # Synchronising tee'd processes is a PITA
   local temp_dir="$(mktemp -d)"
   local output="${temp_dir}/output"
+  trap "rm -rf ${temp_dir}" EXIT
 
   __aggregate_stream() {
     # Aggregate the preclassified data stream
@@ -84,7 +85,6 @@ aggregate_fs_data() {
   # Block on semaphore files before streaming output to stdout
   while (( $(find "${temp_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
   cat "${output}"
-  rm -rf "${temp_dir}"
 }
 
 aggregate() {
@@ -135,7 +135,7 @@ aggregate() {
 
   # Merge everything into final output
   >&2 echo "Merging all aggregated data together..."
-  "${BINDIR}/merge-aggregates.sh" "${data_dir}/"{lustre,nfs,warehouse,irods}{,-pi} > "${data_dir}/aggregated"
+  find "${data_dir}" -type f -exec "${BINDIR}/merge-aggregates.sh" {} \+ > "${data_dir}/aggregated"
   >&2 echo "All done :)"
 }
 

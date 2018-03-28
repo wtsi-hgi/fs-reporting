@@ -5,8 +5,6 @@
 
 set -euo pipefail
 
-BINARY="$(readlink -fn "$0")"
-
 classify() {
   # Classify input: Append the base64 encoding of \0 to the first column
   # of each line and then base64 decode; translate any \n that appear to
