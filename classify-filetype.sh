@@ -13,6 +13,16 @@ classify() {
   # through the classifier.
   local input="$1"
   cut -f1 "${input}" | sed 's/$/AA==/' | base64 -di | tr "\n\0" "X\n" | awk '
+    BEGIN {
+      last = systime()
+    }
+
+    # Log progress every 30 seconds
+    systime() - last >= 30 {
+      last = systime()
+      print "Processed " NR " inodes..." > "/dev/stderr"
+    }
+
     /\.cram$/                                                  { print "cram"; next }
     /\.bam$/                                                   { print "bam"; next }
     /\.(crai|bai|sai|fai|csi)$/                                { print "index"; next }
