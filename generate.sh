@@ -59,7 +59,8 @@ aggregate_fs_data() {
     touch "${lock}"
 
     >&2 echo "Aggregating ${filetype} file statistics for ${fs_type}..."
-    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}"
+    "${BINDIR}/aggregate-mpistat.sh" "${filetype}" "${base_time}" "${fs_type}" \
+    | tee -a "${output}" >/dev/null
     >&2 echo "Completed ${filetype} aggregation for ${fs_type}"
 
     rm -rf "${lock}"
@@ -67,20 +68,21 @@ aggregate_fs_data() {
 
   # NOTE Bash gets into a race condition here, if one expects the output
   # of all the substituted processes to write to the same stdout. To get
-  # around this, we append to a temporary output file and use an ad hoc
-  # semaphore to block until all the aggregators have finished.
+  # around this, we append to a temporary output file (see above) and
+  # use an ad hoc semaphore to block until all the aggregators have
+  # finished... Gross :P
   zcat "${input_data[@]}" \
   | "${BINDIR}/classify-filetype.sh" \
-  | teepot >(__aggregate_stream all          | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream cram         | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream bam          | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream index        | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream compressed   | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream uncompressed | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream checkpoint   | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream log          | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream temp         | tee -a "${output}" >/dev/null &) \
-           >(__aggregate_stream other        | tee -a "${output}" >/dev/null &)
+  | teepot >(__aggregate_stream all) \
+           >(__aggregate_stream cram) \
+           >(__aggregate_stream bam) \
+           >(__aggregate_stream index) \
+           >(__aggregate_stream compressed) \
+           >(__aggregate_stream uncompressed) \
+           >(__aggregate_stream checkpoint) \
+           >(__aggregate_stream log) \
+           >(__aggregate_stream temp) \
+           >(__aggregate_stream other)
 
   # Block on semaphore files before streaming output to stdout
   while (( $(find "${temp_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
