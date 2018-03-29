@@ -236,13 +236,21 @@ dispatch() {
             ;;
 
           "--lsf-aggregate")
-            lsf_aggregate_ops+=("$2")
             shift
+            while (( $# )) && [[ "${1:0:2}" != "--" ]]; do
+              lsf_aggregate_ops+=("$1")
+              shift
+            done
+            continue
             ;;
 
           "--lsf-compile")
-            lsf_compile_ops+=("$2")
             shift
+            while (( $# )) && [[ "${1:0:2}" != "--" ]]; do
+              lsf_compile_ops+=("$1")
+              shift
+            done
+            continue
             ;;
 
           *)
