@@ -94,6 +94,7 @@ main() {
     if [[ "$1" == "--force" ]]; then
       force=1
     fi
+    shift
   done
 
   local pi_map="${WORK_DIR}/gid-pi_uid.map"
@@ -112,10 +113,10 @@ main() {
   rm -f "${pi_map}" "${user_map}" "${group_map}"
 
   echo "Creating Human Genetics Programme group to PI mapping..."
-  create_pi_mapping    > "${pi_map}"
+  create_pi_mapping > "${pi_map}"
 
   echo "Creating user mapping..."
-  create_user_mapping  > "${user_map}"
+  create_user_mapping > "${user_map}"
 
   echo "Creating Human Genetics Programme group mapping..."
   create_group_mapping > "${group_map}"
