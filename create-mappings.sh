@@ -13,7 +13,7 @@ TAB="	"
 get_humgen_groups() {
   # Get the list of active humgen groups, with their PI's username and
   # Unix group ID, respectively, as tab-delimited values
-  ldapsearch -xLLL -s one -b "ou=group,dc=sanger,dc=ac,dc=uk" "(sangerHumgenProjectActive=TRUE)" cn sangerProjectPI gidNumber \
+  ldapsearch -xLLL -s one -b "ou=group,dc=sanger,dc=ac,dc=uk" "(objectClass=sangerHumgenProjectGroup)" cn sangerProjectPI gidNumber \
   | awk '
     BEGIN {
       FS = ": |[,=]"
