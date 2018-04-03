@@ -235,19 +235,18 @@ dispatch() {
             shift
             ;;
 
-          "--lsf-aggregate")
+          "--lsf-aggregate" | "--lsf-compile")
             shift
             while (( $# )) && [[ "${1:0:2}" != "--" ]]; do
-              lsf_aggregate_ops+=("$1")
-              shift
-            done
-            continue
-            ;;
+              case "${option}" in
+                "--lsf-aggregate")
+                  lsf_aggregate_ops+=("$1")
+                  ;;
 
-          "--lsf-compile")
-            shift
-            while (( $# )) && [[ "${1:0:2}" != "--" ]]; do
-              lsf_compile_ops+=("$1")
+                "--lsf-compile")
+                  lsf_compile_ops+=("$1")
+                  ;;
+              esac
               shift
             done
             continue
