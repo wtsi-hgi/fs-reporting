@@ -201,7 +201,7 @@ dispatch() {
 
       local option
       local value
-      while (( $# )); do
+      while (( $# > 1 )); do
         option="$1"
 
         case "${option}" in
@@ -264,6 +264,11 @@ dispatch() {
 
       if ! (( ${#input_data[@]} )); then
         >&2 echo "No filesystem input data specified!"
+        bad_options=1
+      fi
+
+      if (( $# )); then
+        >&2 echo "Incomplete options provided!"
         bad_options=1
       fi
 
