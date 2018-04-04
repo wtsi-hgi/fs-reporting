@@ -98,6 +98,9 @@ which takes an optional `--force` parameter to overwrite the mappings
 that already exist. Note that this script relies on heuristics and its
 outputs may need manual curation.
 
+**WARNING** The below script does not currently work at scale. For now,
+you are best advised to run the aforementioned pipeline steps manually.
+
 To generate the aggregated data (i.e., running the complete pipeline
 outlined above) and compile the final report, a convenience script is
 available that will submit the jobs to an LSF cluster:
