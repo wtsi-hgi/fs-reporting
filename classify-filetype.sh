@@ -36,7 +36,8 @@ classify() {
 }
 
 main() {
-  local input="$(mktemp)"
+  local tmp_base="${1-${TMPDIR-/tmp}}"
+  local input="$(mktemp "${tmp_base%/}/XXXXX")"
   trap "rm -rf ${input}" EXIT
 
   teepot "${input}" - | paste - <(classify "${input}")
