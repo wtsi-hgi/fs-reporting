@@ -37,7 +37,7 @@ get_humgen_groups() {
 
 get_pis() {
   # Get the active humgen group PI Unix user IDs as tab-delimited values
-  get_humgen_groups | cut -f2 | sort | uniq \
+  get_humgen_groups | cut -f2 | sort -b | uniq \
   | xargs -n1 -I{} ldapsearch -xLLL -s base -b "uid={},ou=people,dc=sanger,dc=ac,dc=uk" uid uidNumber \
   | awk '
     BEGIN {
@@ -59,7 +59,7 @@ get_pis() {
 
 create_pi_mapping() {
   # Create group to PI user ID mapping from LDAP
-  join -t"${TAB}" -12 -21 <(get_humgen_groups | sort -t"${TAB}" -k2,2) <(get_pis) \
+  join -t"${TAB}" -12 -21 <(get_humgen_groups | sort -t"${TAB}" -k2b,2) <(get_pis) \
   | awk 'BEGIN { FS = OFS = "\t" } { print $3, $4 "  # " $2 ": " $1 }'
 }
 

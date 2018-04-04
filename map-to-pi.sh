@@ -15,7 +15,7 @@ TAB="	"
 
 main() {
   awk -F"${TAB}" '$2 == "group" { print }' \
-  | sort -t"${TAB}" -k3n,3 \
+  | sort -t"${TAB}" -k3b,3 \
   | join -t"${TAB}" -13 -21 - <(get_mapping "${MAPPING}") \
   | awk 'BEGIN { FS = OFS = "\t" } { print $2, "pi", $8, $4, $5, $6, $7 }'
 }

@@ -8,5 +8,5 @@ get_mapping() {
   local sort_column="${2-1}"
 
   sed '/^\s*#/d;/^\s*$/d;s/\s*#.*//' "${mapping_file}" \
-  | sort -t"${TAB}" -k"${sort_column}n,${sort_column}"
+  | sort -t"${TAB}" -k"${sort_column}b,${sort_column}"
 }
