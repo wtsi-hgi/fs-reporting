@@ -42,20 +42,21 @@ usage() {
 
 aggregate_fs_data() {
   # Generate aggregated data for a particular filesystem type
-  local fs_type="$1"
-  local base_time="$2"
-  local -a input_data=("${@:3}")
+  local temp_dir="$1"
+  local fs_type="$2"
+  local base_time="$3"
+  local -a input_data=("${@:4}")
 
   # Synchronising tee'd processes is a PITA
-  local temp_dir="$(mktemp -d)"
-  local output="${temp_dir}/output"
-  trap "rm -rf ${temp_dir}" EXIT
+  local work_dir="$(mktemp -d "${temp_dir}/XXXXX")"
+  local output="${work_dir}/output"
+  echo "${work_dir}" >> "${temp_dir}/aggregate-manifest"
 
   __aggregate_stream() {
     # Aggregate the preclassified data stream
     local filetype="$1"
 
-    local lock="${temp_dir}/${filetype}.lock"
+    local lock="${work_dir}/${filetype}.lock"
     touch "${lock}"
 
     >&2 echo "Aggregating ${filetype} file statistics for ${fs_type}..."
@@ -72,7 +73,7 @@ aggregate_fs_data() {
   # use an ad hoc semaphore to block until all the aggregators have
   # finished... Gross :P
   zcat "${input_data[@]}" \
-  | "${BINDIR}/classify-filetype.sh" \
+  | "${BINDIR}/classify-filetype.sh" "${temp_dir}" \
   | teepot >(__aggregate_stream all) \
            >(__aggregate_stream cram) \
            >(__aggregate_stream bam) \
@@ -85,7 +86,7 @@ aggregate_fs_data() {
            >(__aggregate_stream other)
 
   # Block on semaphore files before streaming output to stdout
-  while (( $(find "${temp_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
+  while (( $(find "${work_dir}" -type f -name "*.lock" | wc -l) )); do sleep 1; done
   cat "${output}"
 }
 
@@ -96,6 +97,11 @@ aggregate() {
   local -a input_data=("${@:3}")
 
   local data_dir="${output_dir}/data"
+
+  local temp_dir="${output_dir}/temp"
+  local temp_manifest="${temp_dir}/aggregate-manifest"
+  touch "${temp_manifest}"
+  trap "cat \"${temp_manifest}\" | xargs rm -rf \"${temp_manifest}\"" EXIT
 
   >&2 echo "Aggregated data will be written to ${data_dir}"
   >&2 echo "Cost calculations will be based to $(date -d "@${base_time}")"
@@ -123,7 +129,7 @@ aggregate() {
       return
     fi
 
-    aggregate_fs_data "${fs_type}" "${base_time}" "${fs_data[@]}"
+    aggregate_fs_data "${temp_dir}" "${fs_type}" "${base_time}" "${fs_data[@]}"
   }
 
   # Aggregate filesystem data files and map to PI
@@ -280,7 +286,8 @@ dispatch() {
       # Create working directory structure, if it doesn't exist
       local log_dir="${output_dir}/logs"
       local data_dir="${output_dir}/data"
-      mkdir -p "${output_dir}" "${log_dir}" "${data_dir}"
+      local temp_dir="${output_dir}/temp"
+      mkdir -p "${output_dir}" "${log_dir}" "${data_dir}" "${temp_dir}"
 
       # Submit aggregation job
       local job_id="${RANDOM}"
