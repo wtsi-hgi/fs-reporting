@@ -79,7 +79,7 @@ create_user_mapping() {
     $1 == "cn"        { name = gensub(/,? \[.+]$/, "", "g", $2) }
 
     !$0 && user && uid && name {
-      print uid, user, name
+      print uid, name " (" user ")"
       user = uid = name = ""
     }
   '

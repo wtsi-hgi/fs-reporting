@@ -1,2 +1,2 @@
 # Unix user ID to human readable user mapping
-# Tab-delimited, one-record per line: <UID>\t<User Name>\t<Real Name>
+# Tab-delimited, one-record per line: <UID>\t<Real Name>
