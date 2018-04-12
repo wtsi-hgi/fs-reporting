@@ -36,7 +36,7 @@ BINARY="$(readlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 
 # Imports
-source "${WORK_DIR}/get-fs-cost.sh"
+source "${WORK_DIR}/lib/get-fs-cost.sh"
 
 usage() {
   cat <<-EOF
