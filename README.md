@@ -31,6 +31,8 @@ Specifically, we are interested in:
 ## Prerequisites
 
 * Bash 4.2, or higher
+* GNU Awk
+* GNU coreutils
 * [teepot](https://github.com/wtsi-npg/teepot)
 
 ## Pipeline
@@ -84,10 +86,21 @@ operation. It defines a third organisational tag, `pi`, in the
 aggregated output, where the organisation ID (third field) is the PI's
 Unix user ID (per the mapping definition).
 
+An additional mapping step can then be applied, which maps Unix user and
+group IDs to their human readable counterparts; defined in `uid-user.map`
+and `gid-group.map`, respectively. Note that a full join (in relational
+algebra terms) is performed, so any records in the aggregated data
+without a corresponding mapping will be lost; this can be beneficial
+when looking at subsets of data. The mapping can be performed using the
+`map-to-readable.sh` convenience script, which reads from `stdin` and
+writes to `stdout`:
+
+    cat lustre01-logs lustre01-logs-by_pi | ./map-to-readable.sh
+
 Final aggregation/merging can be done using the `merge-aggregates.sh`
 script:
 
-    ./merge-aggregates.sh lustre01-all lustre01-cram lustre01-cram-pi
+    ./merge-aggregates.sh lustre01-all lustre01-cram lustre01-cram-by_pi
 
 This will produce the output data that drives report generation.
 
@@ -95,8 +108,9 @@ This will produce the output data that drives report generation.
 
 Sanger-specific mappings can be produced using `create-mappings.sh`,
 which takes an optional `--force` parameter to overwrite the mappings
-that already exist. Note that this script relies on heuristics and its
-outputs may need manual curation.
+that already exist. Note that this script relies on special fields set
+in LDAP records, which may not be available, so its output may need
+manual curation.
 
 **WARNING** The below script does not currently work at scale. For now,
 you are best advised to run the aforementioned pipeline steps manually.
