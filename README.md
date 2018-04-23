@@ -109,11 +109,13 @@ This will produce the output data that drives report generation.
 Sanger-specific mappings can be produced using `create-mappings.sh`,
 which takes an optional `--force` parameter to overwrite the mappings
 that already exist. Note that this script relies on special fields set
-in LDAP records, which may not be available, so its output may need
-manual curation.
+in LDAP records, which may not be available or up-to-date, so its output
+might need manual curation.
 
 **WARNING** The below script does not currently work at scale. For now,
 you are best advised to run the aforementioned pipeline steps manually.
+To assist this, a Sanger-internal repository is available with the
+orchestration script.
 
 To generate the aggregated data (i.e., running the complete pipeline
 outlined above) and compile the final report, a convenience script is
