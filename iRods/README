@@ -1,0 +1,12 @@
+On iRods the files are grouped by collection, and the collections tell you the project and thus can be linked to the group.
+
+The query 
+iquest -z humgen --no-page "%s???%s???%s???%s" "SELECT COLL_NAME,DATA_NAME,min(DATA_CREATE_TIME),sum(DATA_SIZE)" > test.txt with formatting
+
+User and owner are many to one with file. We do have files size and creation date. They both can differ for replicates which have the same data_id and collection_id so care is needed. 
+
+Because of the way iRods assumes distinct selections unless set otherwise, you can get several rows per file from size and creation date when you thought there was just one. 
+
+The unique owner for a file should be the project and the project is part of the collection name, like /humgen/projects/ddd . 
+
+Then the project can be linked to a group from data outside iRods. (A lot of the data there at the moment looks like test data)
