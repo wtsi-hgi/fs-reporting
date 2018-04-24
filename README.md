@@ -34,6 +34,7 @@ Specifically, we are interested in:
 * GNU Awk
 * GNU coreutils
 * [teepot](https://github.com/wtsi-npg/teepot)
+* R (packages: dplyr, ggplot2)
 
 ## Pipeline
 
