@@ -3,8 +3,8 @@
 # Generate plots of aggregated filesystem data
 # Christopher Harrison <ch12@sanger.ac.uk>
 
-library(ggplot2, warn.conflicts=FALSE)
-library(dplyr, warn.conflicts=FALSE)
+library(ggplot2, warn.conflicts = FALSE)
+library(dplyr, warn.conflicts = FALSE)
 
 usage <- function() {
   write("Usage: visualise.R DATA_FILE OUTPUT_DIR", stderr())
@@ -12,20 +12,35 @@ usage <- function() {
 
 load_data <- function(path) {
   # Load aggregated data from file and annotate, appropriately
-  data <- read.delim(path, header=FALSE,
-                     col.names=c("fs", "orgk", "orgv", "type", "inodes", "size", "cost"))
+  data <- read.delim(path, header = FALSE,
+                     col.names = c("fs", "orgk", "orgv", "type", "inodes", "size", "cost"))
   return(data)
 }
 
 create_plot <- function(data) {
   # Create sunburst plot for the supplied data frame
+  lvl0 <- data.frame(orgv = as.factor("root"), cost = NA, level = as.factor(0), fill = NA)
 
-  # FIXME This is just the summary data, not split by file type in a
-  # multiple-level sunburst plot
-  data.all <- data[data$type == "all",]
-  plot <- ggplot(data.all, aes(y=data.all$cost)) +
-          geom_bar(aes(x=data.all$orgk, fill=data.all$orgv), stat="identity") +
-          coord_polar(theta="y")
+  lvl1 <- data %>%
+          filter(type == "all") %>%
+          mutate(orgv = as.factor(orgv), level = as.factor(1), fill = orgv) %>%
+          select(orgv, cost, level, fill)
+
+  lvl2 <- data %>%
+          filter(type != "all") %>%
+          mutate(type = as.factor(type), level = as.factor(2), fill = orgv) %>%
+          select(orgv = type, cost, level, fill)
+
+  plot <- bind_rows(lvl0, lvl1, lvl2) %>%
+          arrange(fill, orgv) %>%
+          ggplot(aes(x = level, y = cost, fill = fill, alpha = level)) +
+          geom_col(color = "white", size = 0.2, position = position_stack()) +
+          scale_alpha_manual(values = c("0" = 1, "1" = 1, "2" = 0.8), guide = FALSE) +
+          scale_x_discrete(breaks = NULL) +
+          scale_y_continuous(breaks = NULL) +
+          labs(x = NULL, y = NULL, fill = NULL) +
+          coord_polar(theta = "y") +
+          theme_minimal()
 
   return(plot)
 }
@@ -33,34 +48,32 @@ create_plot <- function(data) {
 main <- function(argv) {
   if (length(argv) != 2) {
     usage()
-    quit(status=1)
+    quit(status = 1)
   }
 
   data <- load_data(argv[1])
   output <- normalizePath(argv[2])
 
   org_types <- c("group", "user", "pi")
-  file_types <- c("all", "cram", "bam", "index", "compressed", "uncompressed", "checkpoint", "log", "temp", "other")
 
-  for (fs in unique(data$fs)) {
-    for (orgk in org_types) {
-      write(paste("Creating ", orgk," plot for ", fs, "...", sep=""), stderr())
+  for (i_fs in unique(data$fs)) {
+    for (i_orgk in org_types) {
+      write(paste("Creating ", i_orgk," plot for ", i_fs, "...", sep=""), stderr())
 
       # Get data subset for plotting
-      filtered <- data[data$fs == fs & data$orgk == orgk,]
-      if (orgk != "pi") {
+      filtered <- data %>% filter(fs == i_fs, orgk == i_orgk)
+      if (i_orgk != "pi") {
         # We only care about the top 10 users and groups by cost
-        filtered.all <- filtered[filtered$type == "all",]
-        filtered.all.top10 <- top_n(filtered.all, 10, filtered.all$cost)
-        filtered <- filtered[filtered$orgv %in% filtered.all.top10$orgv,]
+        filtered.top10 <- filtered %>% filter(type == "all") %>% top_n(10, cost)
+        filtered <- filtered %>% filter(orgv %in% filtered.top10$orgv)
       }
 
       # Generate plot and save to disk
       plot <- create_plot(filtered)
-      file <- paste(output, "/", fs, "-", orgk, ".pdf", sep="")
-      ggsave(file, plot=plot, device="pdf")
+      file <- paste(output, "/", i_fs, "-", i_orgk, ".pdf", sep="")
+      ggsave(file, plot = plot, device = "pdf")
     }
   }
 }
 
-main(commandArgs(trailingOnly=TRUE))
+main(commandArgs(trailingOnly = TRUE))
