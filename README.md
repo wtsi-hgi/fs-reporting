@@ -105,6 +105,18 @@ script:
 
 This will produce the output data that drives report generation.
 
+Once the completely aggregated output has been produced, it can be run
+through `render-assets.R`, which will generate the tables and plots for
+the final report. The script takes two positional arguments:
+
+1. The path to the aggregated output.
+2. The output directory for the report assets.
+
+It will produce assets named `OUTPUT_DIR/FILESYSTEM-ORG_TAG.EXT`. For
+example `lustre-pi.pdf` for the plot of Lustre data usage by PI. Note
+that the PI assets are unconstrained, but the group and user assets will
+be limited to the top 10, by cost.
+
 ## tl;dr
 
 Sanger-specific mappings can be produced using `create-mappings.sh`,
