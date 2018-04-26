@@ -19,26 +19,26 @@ load_data <- function(path) {
 
 create_plot <- function(data) {
   # Create sunburst plot for the supplied data frame
-  lvl0 <- data.frame(orgv = as.factor("root"), cost = NA, level = as.factor(0), fill = NA)
+  lvl0 <- data.frame(orgv = as.factor("root"), cost = NA, level = as.factor(0), fill = NA, alpha = NA)
 
   lvl1 <- data %>%
           filter(type == "all") %>%
-          mutate(orgv = as.factor(orgv), level = as.factor(1), fill = orgv) %>%
-          select(orgv, cost, level, fill)
+          mutate(orgv = as.factor(orgv), type = as.factor(type), level = as.factor(1), fill = orgv, alpha = type) %>%
+          select(orgv, cost, level, fill, alpha)
 
   lvl2 <- data %>%
           filter(type != "all") %>%
-          mutate(type = as.factor(type), level = as.factor(2), fill = orgv) %>%
-          select(orgv = type, cost, level, fill)
+          mutate(orgv = as.factor(orgv), type = as.factor(type), level = as.factor(2), fill = orgv, alpha = type) %>%
+          select(orgv = type, cost, level, fill, alpha)
 
   plot <- bind_rows(lvl0, lvl1, lvl2) %>%
           arrange(fill, orgv) %>%
-          ggplot(aes(x = level, y = cost, fill = fill, alpha = level)) +
+          ggplot(aes(x = level, y = cost, fill = fill, alpha = alpha)) +
           geom_col(color = "white", size = 0.2, position = position_stack()) +
-          scale_alpha_manual(values = c("0" = 1, "1" = 1, "2" = 0.8), guide = FALSE) +
+          scale_alpha_discrete(range = c(1, 0.2)) +
           scale_x_discrete(breaks = NULL) +
           scale_y_continuous(breaks = NULL) +
-          labs(x = NULL, y = NULL, fill = NULL) +
+          labs(x = NULL, y = NULL, fill = NULL, alpha = NULL) +
           coord_polar(theta = "y") +
           theme_minimal()
 
@@ -71,9 +71,9 @@ main <- function(argv) {
       # Generate plot and save to disk
       plot <- create_plot(filtered)
       file <- paste(output, "/", i_fs, "-", i_orgk, ".pdf", sep="")
-      ggsave(file, plot = plot, device = "pdf")
+      suppressMessages(ggsave(file, plot = plot, device = "pdf"))
     }
   }
 }
 
-main(commandArgs(trailingOnly = TRUE))
+suppressWarnings(main(commandArgs(trailingOnly = TRUE)))
