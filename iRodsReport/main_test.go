@@ -1,4 +1,4 @@
-package iRodsReport
+package main
 
 import (
 	"fmt"
@@ -12,13 +12,13 @@ func TestFormatFile(t *testing.T) {
 	defer f1.Close()
 	f1.WriteString("aaaaa/project/xx/vv>>bbbb>>cccc>>dddd\n")
 	f1.WriteString("aaaaax>>bbbbx>>ccccx>>ddddx\n")
-	e := FormatFile("/tmp/a.txt", "/tmp/b.txt", "/home/sjc/groups.txt", ">>")
+	e := FormatFile("/tmp/a.txt", "/tmp/b.txt", "/home/sjc/groups.txt", ">>", []string{"aaa", "ccc"})
 	if e != nil {
 		t.Errorf(e.Error())
 	}
 
 	start := time.Now()
-	e = FormatFile("/home/sjc/test.txt", "/tmp/extra.txt", "/home/sjc/groups.txt", "???")
+	e = FormatFile("/home/sjc/test.txt", "/tmp/extra.txt", "/home/sjc/groups.txt", "???", []string{"/humgen/projects", "/humgen/teams"})
 	if e != nil {
 		t.Errorf(e.Error())
 	}

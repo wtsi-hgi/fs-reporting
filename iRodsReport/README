@@ -1,3 +1,17 @@
+Purpose:
+To take a file of iRods stats (collection, filename, creationdate, size) separated by ??? and produce a 
+tab separated file in the mpistat format with base64path, size, groupID and creation time (missing fields are blank
+as explained in the program)
+
+Usage ./iRodsReport -f=<inputfile> -o=<outputfile> -g=<groupsfile>
+
+Help ./iRodsReport -h
+
+only collections starting /humgen/projects or /humgen/teams are written out to the mpistat type file
+(this can be changed in the prefixes array but is not a command line option)
+
+Notes:
+
 On iRods the files are grouped by collection, and the collections tell you the project which is a unix group \
 and thus can be linked to the group id .
 
