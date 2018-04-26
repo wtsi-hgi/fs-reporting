@@ -7,7 +7,7 @@ library(ggplot2, warn.conflicts = FALSE)
 library(dplyr, warn.conflicts = FALSE)
 
 usage <- function() {
-  write("Usage: visualise.R DATA_FILE OUTPUT_DIR", stderr())
+  write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
 }
 
 load_data <- function(path) {
