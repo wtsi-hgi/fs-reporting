@@ -1,4 +1,5 @@
-package main
+// Package iRodsReport formats iRods retrieved data to match the mpistat format
+package iRodsReport
 
 import (
 	"bufio"
@@ -104,6 +105,7 @@ func getProjectFromCollection(collection string) (project string) {
 	for i := range parts {
 		if (parts[i] == "projects") && (i < len(parts)-1) {
 			project = parts[i+1]
+			break
 		}
 	}
 	return

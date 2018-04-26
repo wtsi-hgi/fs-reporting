@@ -1,4 +1,5 @@
-On iRods the files are grouped by collection, and the collections tell you the project and thus can be linked to the group.
+On iRods the files are grouped by collection, and the collections tell you the project which is a unix group \
+and thus can be linked to the group id .
 
 The query 
 iquest -z humgen --no-page "%s???%s???%s???%s" "SELECT COLL_NAME,DATA_NAME,min(DATA_CREATE_TIME),sum(DATA_SIZE)" > test.txt with formatting
@@ -9,4 +10,4 @@ Because of the way iRods assumes distinct selections unless set otherwise, you c
 
 The unique owner for a file should be the project and the project is part of the collection name, like /humgen/projects/ddd . 
 
-Then the project can be linked to a group from data outside iRods. (A lot of the data there at the moment looks like test data)
+Where there is no projects part of the collection, hgi is returned as the group
