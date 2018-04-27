@@ -34,8 +34,17 @@ create_plot <- function(data) {
   plot <- bind_rows(lvl0, lvl1, lvl2) %>%
           arrange(fill, orgv) %>%
           ggplot(aes(x = level, y = cost, fill = fill, alpha = alpha)) +
-          geom_col(color = "white", size = 0.2, position = position_stack()) +
-          scale_alpha_discrete(range = c(1, 0.2)) +
+          geom_col(color = "white", width = 0.999, size = 0.2, position = position_stack()) +
+          scale_alpha_manual(values = c("all"          = 1,
+                                        "bam"          = 0.75,
+                                        "checkpoint"   = 0.6875,
+                                        "compressed"   = 0.625,
+                                        "cram"         = 0.5625,
+                                        "index"        = 0.5,
+                                        "log"          = 0.4375,
+                                        "other"        = 0.375,
+                                        "temp"         = 0.3125,
+                                        "uncompressed" = 0.25)) +
           scale_x_discrete(breaks = NULL) +
           scale_y_continuous(breaks = NULL) +
           labs(x = NULL, y = NULL, fill = NULL, alpha = NULL) +
