@@ -105,7 +105,12 @@ main <- function(argv) {
         exportable.bottom <- exportable.ranked %>% filter(rank == 2) %>%
                              group_by(fs, orgk, type, rank) %>%
                              summarise(inodes = sum(inodes), size = sum(size), cost = sum(cost)) %>%
-                             mutate(orgv = ifelse(i_orgk == "user", "Everyone else", "Everything else"))
+                             mutate(orgv = paste("\\hline\\textit{Every", ifelse(i_orgk == "user", "one", "thing"), " Else}", sep = ""))
+
+        if (i_orgk == "group") {
+          # Sanitise group names
+          exportable.top <- exportable.top %>% mutate(orgv = paste("\\texttt{", sanitize(orgv), "}", sep = ""))
+        }
 
         exportable <- bind_rows(exportable.top, exportable.bottom)
       }
@@ -122,11 +127,11 @@ main <- function(argv) {
                        arrange(rank, desc(cost)) %>%
                        mutate(h_inodes = quantify(inodes, multiplier = c("k", "M", "B", "T")),
                               h_size   = quantify(size, base = 1024, suffix = "iB", sep = " "),
-                              h_cost   = sprintf("£%.2f", cost)) %>%
+                              h_cost   = sprintf("\\pounds%.2f", cost)) %>%
                        select("Identity" = orgv, "inodes" = h_inodes, "Size" = h_size, "Cost" = h_cost),
                        align = "llrrr")
       export.file <- paste(output.prefix, "tex", sep="")
-      print(export, include.rownames = FALSE, type = "latex", file = export.file)
+      print(export, include.rownames = FALSE, type = "latex", sanitize.text.function = as.is, file = export.file)
     }
   }
 }
