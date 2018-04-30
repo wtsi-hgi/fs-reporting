@@ -33,6 +33,14 @@ quantify <- function(n, base = 1000, suffix = "", multiplier = c("k", "M", "G", 
     sep = sep))
 }
 
+format_cost <- function(cost) {
+  # Thousand separated to two decimal places, with pound LaTeX symbol
+  return(paste(
+    "\\pounds",
+    format(round(as.numeric(cost), 2), nsmall = 2, big.mark = ","),
+    sep = ""))
+}
+
 create_plot <- function(data) {
   # Create sunburst plot for the supplied data frame
   lvl0 <- data.frame(orgv = as.factor("root"), cost = NA, level = as.factor(0), fill = NA, alpha = NA)
@@ -127,7 +135,7 @@ main <- function(argv) {
                        arrange(rank, desc(cost)) %>%
                        mutate(h_inodes = quantify(inodes, multiplier = c("k", "M", "B", "T")),
                               h_size   = quantify(size, base = 1024, suffix = "iB", sep = " "),
-                              h_cost   = sprintf("\\pounds%.2f", cost)) %>%
+                              h_cost   = format_cost(cost)) %>%
                        select("Identity" = orgv, "inodes" = h_inodes, "Size" = h_size, "Cost" = h_cost),
                        align = "llrrr")
       export.file <- paste(output.prefix, "tex", sep="")
