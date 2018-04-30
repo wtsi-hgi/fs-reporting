@@ -113,9 +113,9 @@ the final report. The script takes two positional arguments:
 2. The output directory for the report assets.
 
 It will produce assets named `OUTPUT_DIR/FILESYSTEM-ORG_TAG.EXT`. For
-example `lustre-pi.pdf` for the plot of Lustre data usage by PI. Note
-that the PI assets are unconstrained, but the group and user assets will
-be limited to the top 10, by cost.
+example `/path/to/assets/lustre-pi.pdf` for the plot of Lustre data
+usage by PI. Note that the PI assets are unconstrained, but the group
+and user assets will be limited to the top 10, by cost.
 
 ## tl;dr
 
