@@ -18,26 +18,31 @@ load_data <- function(path) {
   return(data)
 }
 
-quantify <- function(n, base = 1000, suffix = "", multiplier = c("k", "M", "G", "T", "P"), sep = "") {
+format.quantified <- function(n, base = 1000, suffix = "", multiplier = c("k", "M", "G", "T", "P"), threshold = 0.8, sep = "") {
   # Return n, quantified by order of magnitude (relative to base,
-  # defaulting to SI prefixes) with an optional suffix
+  # defaulting to SI prefixes) with an optional suffix for units
   n <- as.numeric(n)
   base <- as.integer(base)
   exponent <- as.integer(log(n, base = base))
 
-  is_float <- n != trunc(n)
+  is.decimal <- n != trunc(n)
+
+  # Move up to the next multiplier if we're close enough
+  if (n / (base ^ (exponent + 1)) >= threshold) { exponent <- exponent + 1 }
 
   return(paste(
-    paste(ifelse(exponent | is_float, sprintf("%.1f", n / (base ^ exponent)), n)),
+    paste(ifelse(exponent | is.decimal, sprintf("%.1f", n / (base ^ exponent)), n)),
     paste(ifelse(exponent, multiplier[exponent], ""), suffix, sep = ""),
     sep = sep))
 }
 
-format_cost <- function(cost) {
-  # Thousand separated to two decimal places, with pound LaTeX symbol
+format.money <- function(value, prefix = "", suffix = "") {
+  # Thousand separated to two decimal places, with optional prefix and
+  # suffix for currency symbols
   return(paste(
-    "\\pounds",
-    format(round(as.numeric(cost), 2), nsmall = 2, big.mark = ","),
+    prefix,
+    format(round(as.numeric(value), 2), nsmall = 2, big.mark = ","),
+    suffix,
     sep = ""))
 }
 
@@ -133,9 +138,9 @@ main <- function(argv) {
       # Generate exportable data frame and save to disk
       export <- xtable(exportable %>%
                        arrange(rank, desc(cost)) %>%
-                       mutate(h_inodes = quantify(inodes, multiplier = c("k", "M", "B", "T")),
-                              h_size   = quantify(size, base = 1024, suffix = "iB", sep = " "),
-                              h_cost   = format_cost(cost)) %>%
+                       mutate(h_inodes = format.quantified(inodes, multiplier = c("k", "M", "B", "T")),
+                              h_size   = format.quantified(size, base = 1024, suffix = "iB", sep = " "),
+                              h_cost   = format.money(cost, prefix = "\\pounds")) %>%
                        select("Identity" = orgv, "inodes" = h_inodes, "Size" = h_size, "Cost" = h_cost),
                        align = "llrrr")
       export.file <- paste(output.prefix, "tex", sep="")
