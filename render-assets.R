@@ -10,6 +10,13 @@ library(functional, warn.conflicts = FALSE)
 
 ## Utility Functions ###################################################
 
+usage(error) {
+  # Output error message, instructions and exit with non-zero status
+  write(paste("Error:", error$message), stderr())
+  write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
+  quit(status = 1)
+}
+
 # Load aggregated data from file and annotate, appropriately
 read.data <- Curry(read.delim, header = FALSE, col.names = c("fs", "orgk", "orgv", "type", "inodes", "size", "cost"))
 
@@ -197,11 +204,5 @@ main <- function(argv) {
 }
 
 tryCatch(
-  suppressWarnings(
-    main(commandArgs(trailingOnly = TRUE))),
-
-  error = function(e) {
-    write(paste("Error:", e$message), stderr())
-    write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
-    quit(status = 1)
-  })
+  suppressWarnings(main(commandArgs(trailingOnly = TRUE))),
+  error = usage)
