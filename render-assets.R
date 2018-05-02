@@ -10,7 +10,7 @@ library(functional, warn.conflicts = FALSE)
 
 ## Utility Functions ###################################################
 
-usage(error) {
+usage <- function(error) {
   # Output error message, instructions and exit with non-zero status
   write(paste("Error:", error$message), stderr())
   write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
@@ -75,9 +75,9 @@ format.quantified <- function(n, base = 1000, prefix = c("", "k", "M", "G", "T",
   is.decimal <- n != trunc(n)
 
   # Move up to the next prefix multiplier if we're close enough
-  # FIXME This condition only applies to the first element, but the
-  # increment will be applied to everything
-  # if (n / (base ^ (exponent + 1)) >= threshold) { exponent <- exponent + 1 }
+  #! FIXME This condition only applies to the first element, but the
+  #! increment will be applied to everything
+  #! if (n / (base ^ (exponent + 1)) >= threshold) { exponent <- exponent + 1 }
 
   paste(
     ifelse(exponent | is.decimal, sprintf("%.1f", n / (base ^ exponent)), n),
@@ -105,44 +105,36 @@ create_plot <- function(data) {
   # Create sunburst plot for the supplied data frame
   lvl0 <- data.frame(orgv = as.factor("root"), cost = NA, level = as.factor(0), fill = NA, alpha = NA)
 
-  lvl1 <- data %>%
-          filter(type == "all") %>%
+  lvl1 <- filter(data, type == "all") %>%
           mutate(orgv = as.factor(orgv), type = as.factor(type), level = as.factor(1), fill = orgv, alpha = type) %>%
           select(orgv, cost, level, fill, alpha)
 
-  lvl2 <- data %>%
-          filter(type != "all") %>%
+  lvl2 <- filter(data, type != "all") %>%
           mutate(orgv = as.factor(orgv), type = as.factor(type), level = as.factor(2), fill = orgv, alpha = type) %>%
           select(orgv = type, cost, level, fill, alpha)
 
-  plot <- bind_rows(lvl0, lvl1, lvl2) %>%
-          arrange(fill, orgv) %>%
-          ggplot(aes(x = level, y = cost, fill = fill, alpha = alpha)) +
-          geom_col(color = "white", width = 0.999, size = 0.2, position = position_stack()) +
-          scale_alpha_manual(values = c("all"          = 1,
-                                        "bam"          = 0.75,
-                                        "checkpoint"   = 0.6875,
-                                        "compressed"   = 0.625,
-                                        "cram"         = 0.5625,
-                                        "index"        = 0.5,
-                                        "log"          = 0.4375,
-                                        "other"        = 0.375,
-                                        "temp"         = 0.3125,
-                                        "uncompressed" = 0.25)) +
-          scale_x_discrete(breaks = NULL) +
-          scale_y_continuous(breaks = NULL) +
-          labs(x = NULL, y = NULL, fill = NULL, alpha = NULL) +
-          coord_polar(theta = "y") +
-          theme_minimal()
-
-  return(plot)
+  bind_rows(lvl0, lvl1, lvl2) %>% arrange(fill, orgv) %>%
+  ggplot(aes(x = level, y = cost, fill = fill, alpha = alpha)) +
+    geom_col(color = "white", width = 0.999, size = 0.2, position = position_stack()) +
+    scale_alpha_manual(values = c("all"          = 1,
+          "bam"          = 0.75,
+          "checkpoint"   = 0.6875,
+          "compressed"   = 0.625,
+          "cram"         = 0.5625,
+          "index"        = 0.5,
+          "log"          = 0.4375,
+          "other"        = 0.375,
+          "temp"         = 0.3125,
+          "uncompressed" = 0.25)) +
+    scale_x_discrete(breaks = NULL) +
+    scale_y_continuous(breaks = NULL) +
+    labs(x = NULL, y = NULL, fill = NULL, alpha = NULL) +
+    coord_polar(theta = "y") +
+    theme_minimal()
 }
 
 main <- function(argv) {
-  if (length(argv) != 2) {
-    stop("Invalid arguments")
-  }
-
+  if (length(argv) != 2) { stop("Invalid arguments") }
   data <- read.data(argv[1])
   output <- normalizePath(argv[2])
 
@@ -153,30 +145,28 @@ main <- function(argv) {
       write(paste("Creating ", i_orgk," assets for ", i_fs, "...", sep=""), stderr())
 
       # Get data subset for plotting
-      filtered <- data %>% filter(fs == i_fs, orgk == i_orgk)
+      filtered <- filter(data, fs == i_fs, orgk == i_orgk)
 
       # Create exportable data frame
-      exportable <- filtered %>%
-                    filter(type == "all") %>%
+      exportable <- filter(filtered, type == "all") %>%
                     mutate(rank = 1)
 
       if (i_orgk != "pi") {
         # We only care about the top 10 users and groups by cost
-        filtered.top10 <- filtered %>% filter(type == "all") %>% top_n(10, cost)
-        filtered <- filtered %>% filter(orgv %in% filtered.top10$orgv)
+        filtered.top10 <- filter(filtered, type == "all") %>% top_n(10, cost)
+        filtered <- filter(filtered, orgv %in% filtered.top10$orgv)
 
         # Summarise everything besides the top 10
-        exportable.ranked <- exportable %>%
-                             mutate(rank = ifelse(rank(desc(cost)) <= 10, 1, 2))
-        exportable.top    <- exportable.ranked %>% filter(rank == 1)
-        exportable.bottom <- exportable.ranked %>% filter(rank == 2) %>%
+        exportable.ranked <- mutate(exportable, rank = ifelse(rank(desc(cost)) <= 10, 1, 2))
+        exportable.top    <- filter(exportable.ranked, rank == 1)
+        exportable.bottom <- filter(exportable.ranked, rank == 2) %>%
                              group_by(fs, orgk, type, rank) %>%
                              summarise(inodes = sum(inodes), size = sum(size), cost = sum(cost)) %>%
                              mutate(orgv = paste("\\hline\\textit{Every", ifelse(i_orgk == "user", "one", "thing"), " Else}", sep = ""))
 
         if (i_orgk == "group") {
           # Sanitise group names
-          exportable.top <- exportable.top %>% mutate(orgv = paste("\\texttt{", sanitize(orgv), "}", sep = ""))
+          exportable.top <- mutate(exportable.top, orgv = paste("\\texttt{", sanitize(orgv), "}", sep = ""))
         }
 
         exportable <- bind_rows(exportable.top, exportable.bottom)
@@ -190,8 +180,7 @@ main <- function(argv) {
       suppressMessages(ggsave(plot.file, plot = plot, device = "pdf"))
 
       # Generate exportable data frame and save to disk
-      export <- xtable(exportable %>%
-                       arrange(rank, desc(cost)) %>%
+      export <- xtable(arrange(exportable, rank, desc(cost)) %>%
                        mutate(h_inodes = format.count(inodes),
                               h_size   = format.data(size),
                               h_cost   = format.money(cost, prefix = "\\pounds")) %>%
