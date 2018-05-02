@@ -3,48 +3,54 @@
 # Generate plots of aggregated filesystem data
 # Christopher Harrison <ch12@sanger.ac.uk>
 
-library(ggplot2, warn.conflicts = FALSE)
-library(dplyr, warn.conflicts = FALSE)
-library(xtable, warn.conflicts = FALSE)
+library(ggplot2,    warn.conflicts = FALSE)
+library(dplyr,      warn.conflicts = FALSE)
+library(xtable,     warn.conflicts = FALSE)
+library(functional, warn.conflicts = FALSE)
 
-usage <- function() {
-  write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
-}
+## Utility Functions ###################################################
 
-load_data <- function(path) {
-  # Load aggregated data from file and annotate, appropriately
-  data <- read.delim(path, header = FALSE,
-                     col.names = c("fs", "orgk", "orgv", "type", "inodes", "size", "cost"))
-  return(data)
-}
+# Load aggregated data from file and annotate, appropriately
+read.data <- Curry(read.delim, header = FALSE, col.names = c("fs", "orgk", "orgv", "type", "inodes", "size", "cost"))
 
-format.quantified <- function(n, base = 1000, suffix = "", multiplier = c("k", "M", "G", "T", "P"), threshold = 0.8, sep = "") {
+## Text Formatting Functions ###########################################
+
+format.quantified <- function(n, base = 1000, prefix = c("", "k", "M", "G", "T", "P"), suffix = "", threshold = 0.8, sep = "") {
   # Return n, quantified by order of magnitude (relative to base,
-  # defaulting to SI prefixes) with an optional suffix for units
+  # defaulting to SI prefixes) to one decimal place (or exactly, for
+  # non-quantified integers) with an optional suffix for units
   n <- as.numeric(n)
   base <- as.integer(base)
-  exponent <- as.integer(log(n, base = base))
+  exponent <- trunc(log(n, base = base))
 
   is.decimal <- n != trunc(n)
 
-  # Move up to the next multiplier if we're close enough
-  if (n / (base ^ (exponent + 1)) >= threshold) { exponent <- exponent + 1 }
+  # Move up to the next prefix multiplier if we're close enough
+  # FIXME This condition only applies to the first element, but the
+  # increment will be applied to everything
+  # if (n / (base ^ (exponent + 1)) >= threshold) { exponent <- exponent + 1 }
 
-  return(paste(
-    paste(ifelse(exponent | is.decimal, sprintf("%.1f", n / (base ^ exponent)), n)),
-    paste(ifelse(exponent, multiplier[exponent], ""), suffix, sep = ""),
-    sep = sep))
+  paste(
+    ifelse(exponent | is.decimal, sprintf("%.1f", n / (base ^ exponent)), n),
+    paste(prefix[exponent + 1], suffix, sep = ""),
+    sep = sep)
 }
 
-format.money <- function(value, prefix = "", suffix = "") {
+# Convenience wrappers
+format.count <- Curry(format.quantified, prefix = c("", "k", "M", "B", "T"))
+format.data <- Curry(format.quantified, base = 1024, suffix = "iB", sep = " ")
+
+format.money <- function(value, prefix = "", suffix = "", sep = "") {
   # Thousand separated to two decimal places, with optional prefix and
   # suffix for currency symbols
-  return(paste(
+  paste(
     prefix,
     format(round(as.numeric(value), 2), nsmall = 2, big.mark = ","),
     suffix,
-    sep = ""))
+    sep = sep)
 }
+
+########################################################################
 
 create_plot <- function(data) {
   # Create sunburst plot for the supplied data frame
@@ -85,11 +91,10 @@ create_plot <- function(data) {
 
 main <- function(argv) {
   if (length(argv) != 2) {
-    usage()
-    quit(status = 1)
+    stop("Invalid arguments")
   }
 
-  data <- load_data(argv[1])
+  data <- read.data(argv[1])
   output <- normalizePath(argv[2])
 
   org_types <- c("group", "user", "pi")
@@ -138,8 +143,8 @@ main <- function(argv) {
       # Generate exportable data frame and save to disk
       export <- xtable(exportable %>%
                        arrange(rank, desc(cost)) %>%
-                       mutate(h_inodes = format.quantified(inodes, multiplier = c("k", "M", "B", "T")),
-                              h_size   = format.quantified(size, base = 1024, suffix = "iB", sep = " "),
+                       mutate(h_inodes = format.count(inodes),
+                              h_size   = format.data(size),
                               h_cost   = format.money(cost, prefix = "\\pounds")) %>%
                        select("Identity" = orgv, "inodes" = h_inodes, "Size" = h_size, "Cost" = h_cost),
                        align = "llrrr")
@@ -149,4 +154,12 @@ main <- function(argv) {
   }
 }
 
-suppressWarnings(main(commandArgs(trailingOnly = TRUE)))
+tryCatch(
+  suppressWarnings(
+    main(commandArgs(trailingOnly = TRUE))),
+
+  error = function(e) {
+    write(paste("Error:", e$message), stderr())
+    write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
+    quit(status = 1)
+  })
