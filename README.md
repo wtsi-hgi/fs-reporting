@@ -34,7 +34,8 @@ Specifically, we are interested in:
 * GNU Awk
 * GNU coreutils
 * [teepot](https://github.com/wtsi-npg/teepot)
-* R (packages: dplyr, ggplot2, xtable, functional)
+* R (packages: dplyr, ggplot2, xtable, functional, templates)
+* LaTeX (packages: datetime, fancyhdr, parskip, mathpazo, eulervm)
 
 ## Pipeline
 
@@ -106,16 +107,24 @@ script:
 This will produce the output data that drives report generation.
 
 Once the completely aggregated output has been produced, it can be run
-through `render-assets.R`, which will generate the tables and plots for
-the final report. The script takes two positional arguments:
+through `render-assets.R`, which will generate the tables, plots and
+LaTeX source for the final report. The script takes three positional
+arguments:
 
 1. The path to the aggregated output.
 2. The output directory for the report assets.
+3. The data aggregation date (optional; defaults to today).
 
-It will produce assets named `OUTPUT_DIR/FILESYSTEM-ORG_TAG.EXT`. For
-example `/path/to/assets/lustre-pi.pdf` for the plot of Lustre data
-usage by PI. Note that the PI assets are unconstrained, but the group
-and user assets will be limited to the top 10, by cost.
+It will produce assets named `OUTPUT_DIR/FILESYSTEM-ORG_TAG.EXT` -- for
+example, `/path/to/assets/lustre-pi.pdf` for the plot of Lustre data
+usage by PI -- as well as `OUTPUT_DIR/report.tex`, which makes use of
+these. (Note that the PI assets are unconstrained, but the group
+and user assets will be limited to the top 10, by cost.)
+
+The final report can be compiled using LaTeX. For example:
+
+    cd /path/to/assets
+    latexmk -pdf report.tex
 
 ## tl;dr
 
