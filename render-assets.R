@@ -1,19 +1,20 @@
 #!/usr/bin/env Rscript
 
-# Generate plots of aggregated filesystem data
+# Render report assets given aggregated filesystem data
 # Christopher Harrison <ch12@sanger.ac.uk>
 
 library(ggplot2,    warn.conflicts = FALSE)
 library(dplyr,      warn.conflicts = FALSE)
 library(xtable,     warn.conflicts = FALSE)
 library(functional, warn.conflicts = FALSE)
+library(templates,  warn.conflicts = FALSE)
 
 ## Utility Functions ###################################################
 
 usage <- function(error) {
   # Output error message, instructions and exit with non-zero status
   write(paste("Error:", error$message), stderr())
-  write("Usage: render-assets.R DATA_FILE OUTPUT_DIR", stderr())
+  write("Usage: render-assets.R DATA_FILE OUTPUT_DIR [AGGREGATION_DATE]", stderr())
   quit(status = 1)
 }
 
@@ -133,10 +134,16 @@ create_plot <- function(data) {
     theme_minimal()
 }
 
+## Entrypoint ##########################################################
+
 main <- function(argv) {
-  if (length(argv) != 2) { stop("Invalid arguments") }
+  if (length(argv) < 2) { stop("Invalid arguments") }
   data <- read.data(argv[1])
   output <- normalizePath(argv[2])
+
+  # Get aggregation date
+  if (length(argv) == 2) { argv <- c(argv, "now") }
+  data.date <- system(paste("date -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
 
   org_types <- c("group", "user", "pi")
 
