@@ -100,39 +100,43 @@ format.money <- function(value, prefix = "", suffix = "", sep = "") {
     sep = sep)
 }
 
-########################################################################
+## Plotting Function ###################################################
 
-create_plot <- function(data) {
+plot.render <- function(data) {
   # Create sunburst plot for the supplied data frame
-  lvl0 <- data.frame(orgv = as.factor("root"), cost = NA, level = as.factor(0), fill = NA, alpha = NA)
+  lvl0 <- data.frame(orgv = "root", cost = NA, level = as.factor(0), fill = NA, alpha = NA)
 
   lvl1 <- filter(data, type == "all") %>%
-          mutate(orgv = as.factor(orgv), type = as.factor(type), level = as.factor(1), fill = orgv, alpha = type) %>%
+          mutate(level = as.factor(1), fill = orgv, alpha = type) %>%
           select(orgv, cost, level, fill, alpha)
 
   lvl2 <- filter(data, type != "all") %>%
-          mutate(orgv = as.factor(orgv), type = as.factor(type), level = as.factor(2), fill = orgv, alpha = type) %>%
+          mutate(level = as.factor(2), fill = orgv, alpha = type) %>%
           select(orgv = type, cost, level, fill, alpha)
 
   bind_rows(lvl0, lvl1, lvl2) %>% arrange(fill, orgv) %>%
   ggplot(aes(x = level, y = cost, fill = fill, alpha = alpha)) +
     geom_col(color = "white", width = 0.999, size = 0.2, position = position_stack()) +
     scale_alpha_manual(values = c("all"          = 1,
-          "bam"          = 0.75,
-          "checkpoint"   = 0.6875,
-          "compressed"   = 0.625,
-          "cram"         = 0.5625,
-          "index"        = 0.5,
-          "log"          = 0.4375,
-          "other"        = 0.375,
-          "temp"         = 0.3125,
-          "uncompressed" = 0.25)) +
+                                  "bam"          = 0.75,
+                                  "checkpoint"   = 0.6875,
+                                  "compressed"   = 0.625,
+                                  "cram"         = 0.5625,
+                                  "index"        = 0.5,
+                                  "log"          = 0.4375,
+                                  "other"        = 0.375,
+                                  "temp"         = 0.3125,
+                                  "uncompressed" = 0.25)) +
     scale_x_discrete(breaks = NULL) +
     scale_y_continuous(breaks = NULL) +
     labs(x = NULL, y = NULL, fill = NULL, alpha = NULL) +
     coord_polar(theta = "y") +
     theme_minimal()
 }
+
+## LaTeX Template Functions ############################################
+
+# TODO
 
 ## Entrypoint ##########################################################
 
@@ -141,60 +145,93 @@ main <- function(argv) {
   data <- read.data(argv[1])
   output <- normalizePath(argv[2])
 
-  # Get aggregation date
+  # Get aggregation date (expects GNU date)
   if (length(argv) == 2) { argv <- c(argv, "now") }
-  data.date <- system(paste("date -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
+  data.date <- system(paste("gdate -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
 
-  org_types <- c("group", "user", "pi")
+  org.values <- c("group", "user", "pi")
+  filename.template <- tmpl("{{ dir }}/{{ fs }}-{{ orgk }}.{{ ext }}")
 
   for (i_fs in unique(data$fs)) {
-    for (i_orgk in org_types) {
+    for (i_orgk in org.values) {
       write(paste("Creating ", i_orgk," assets for ", i_fs, "...", sep=""), stderr())
 
-      # Get data subset for plotting
+      # Get data subset for filesystem and organisational type
       filtered <- filter(data, fs == i_fs, orgk == i_orgk)
 
-      # Create exportable data frame
-      exportable <- filter(filtered, type == "all") %>%
-                    mutate(rank = 1)
+      # Mark the top 10 records by overall cost
+      orgv.top10 <- filter(filtered, type == "all") %>% top_n(10, cost)
+      filtered <- mutate(filtered, in.top10 = orgv %in% orgv.top10$orgv)
 
+      # Summarise everything not in the top 10
+      orgv.rest <- paste("Every", ifelse(i_orgk == "group", "thing", "one"), " Else", sep = "")
+      filtered.rest <- filter(filtered, in.top10 == FALSE) %>%
+                       group_by(fs, orgk, type, in.top10) %>%
+                       summarise(inodes = sum(inodes), size = sum(size), cost = sum(cost)) %>%
+                       mutate(orgv = orgv.rest)
+
+      # For the plots, we want the top 10 records and the summary of
+      # everything else, regardless of organisational type
+      filtered.plot <- filter(filtered, in.top10 == TRUE) %>%
+                       bind_rows(filtered.rest)
+
+      # For the table, we want the full PI data, but the top 10 and
+      # summary for users and groups, then the raw data munged into a
+      # human-friendly format
+      # NOTE filter won't let me use an ifelse expression :(
+      if (i_orgk == "pi") {
+        filtered.table <- filtered
+      } else {
+        filtered.table <- filtered.plot
+      }
+      filtered.table <- filter(filtered.table, type == "all") %>%
+                        mutate(latex.begin = "", latex.end = "")
+
+      # More specific formatting
       if (i_orgk != "pi") {
-        # We only care about the top 10 users and groups by cost
-        filtered.top10 <- filter(filtered, type == "all") %>% top_n(10, cost)
-        filtered <- filter(filtered, orgv %in% filtered.top10$orgv)
-
-        # Summarise everything besides the top 10
-        exportable.ranked <- mutate(exportable, rank = ifelse(rank(desc(cost)) <= 10, 1, 2))
-        exportable.top    <- filter(exportable.ranked, rank == 1)
-        exportable.bottom <- filter(exportable.ranked, rank == 2) %>%
-                             group_by(fs, orgk, type, rank) %>%
-                             summarise(inodes = sum(inodes), size = sum(size), cost = sum(cost)) %>%
-                             mutate(orgv = paste("\\hline\\textit{Every", ifelse(i_orgk == "user", "one", "thing"), " Else}", sep = ""))
+        # "Everyone/thing Else" row is italicised
+        filtered.table.top10 <- filter(filtered.table, in.top10 == TRUE)
+        filtered.table.rest <- filter(filtered.table, in.top10 == FALSE) %>%
+                               mutate(latex.begin = "\\textit{", latex.end = "}")
 
         if (i_orgk == "group") {
           # Sanitise group names
-          exportable.top <- mutate(exportable.top, orgv = paste("\\texttt{", sanitize(orgv), "}", sep = ""))
+          filtered.table.top10 <- mutate(filtered.table.top10, orgv = paste("\\texttt{", sanitize(orgv), "}", sep = ""))
         }
 
-        exportable <- bind_rows(exportable.top, exportable.bottom)
+        filtered.table <- bind_rows(filtered.table.top10, filtered.table.rest)
       }
 
-      output.prefix <- paste(output, "/", i_fs, "-", i_orgk, ".", sep="")
+      # Create a total line
+      filtered.table.total <- group_by(filtered.table, fs, orgk) %>%
+                              summarise(inodes = sum(inodes), size = sum(size), cost = sum(cost)) %>%
+                              mutate(orgv = "Total", latex.begin = "\\textbf{", latex.end = "}")
 
-      # Generate plot and save to disk
-      plot <- create_plot(filtered)
-      plot.file <- paste(output.prefix, "pdf", sep="")
-      suppressMessages(ggsave(plot.file, plot = plot, device = "pdf"))
+      # Sort by cost, append total line and apply LaTeX formatting
+      filtered.table <- arrange(filtered.table, desc(cost)) %>%
+                        bind_rows(filtered.table.total) %>%
+                        mutate(orgv     = paste(latex.begin, orgv, latex.end, sep = ""),
+                               h_inodes = paste(latex.begin, format.count(inodes), latex.end, sep = ""),
+                               h_size   = paste(latex.begin, format.data(size), latex.end, sep = ""),
+                               h_cost   = paste(latex.begin, format.money(cost, prefix = "\\pounds"), latex.end, sep = "")) %>%
+                        select("\\textbf{Identity}" = orgv,
+                               "\\textbf{inodes}"   = h_inodes,
+                               "\\textbf{Size}"     = h_size,
+                               "\\textbf{Cost}"     = h_cost)
 
-      # Generate exportable data frame and save to disk
-      export <- xtable(arrange(exportable, rank, desc(cost)) %>%
-                       mutate(h_inodes = format.count(inodes),
-                              h_size   = format.data(size),
-                              h_cost   = format.money(cost, prefix = "\\pounds")) %>%
-                       select("Identity" = orgv, "inodes" = h_inodes, "Size" = h_size, "Cost" = h_cost),
-                       align = "llrrr")
-      export.file <- paste(output.prefix, "tex", sep="")
-      print(export, include.rownames = FALSE, type = "latex", sanitize.text.function = as.is, file = export.file)
+      # Export assets
+      asset.filename = Curry(tmplUpdate, filename.template, dir = output, fs = i_fs, orgk = i_orgk)
+
+      suppressMessages(ggsave(asset.filename(ext = "pdf"),
+                       plot = plot.render(filtered.plot),
+                       device = "pdf"))
+
+      print(xtable(filtered.table, align = "llrrr"),
+            include.rownames = FALSE,
+            type = "latex",
+            sanitize.text.function = as.is,
+            hline.after = c(-1, 0, nrow(filtered.table) - 1),
+            file = asset.filename(ext = "tex"))
     }
   }
 }
