@@ -109,7 +109,7 @@ script:
 This will produce the output data that drives report generation.
 
 Once the completely aggregated output has been produced, it can be run
-through `render-assets.R`, which will generate the tables, plots and
+through `generate-assets.R`, which will generate the tables, plots and
 LaTeX source for the final report. The script takes three positional
 arguments:
 
