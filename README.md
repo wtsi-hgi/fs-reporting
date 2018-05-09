@@ -75,7 +75,9 @@ The aggregation script takes three optional, positional arguments:
    defaulting to `lustre`.
 
 The filesystem types, that define cost per terabyte year, are enumerated
-in `get-fs-cost.sh`.
+in `fs-cost.map`. Note also that, for shared filesystems, it may be
+worth filtering the `mpistat` data before classifying and/or aggregating
+it; for example, by group.
 
 Aggregated data can be mapped to PI by running it through `map-to-pi.sh`.
 This script strips out any `user` records and replaces `group` records

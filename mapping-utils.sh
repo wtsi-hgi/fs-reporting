@@ -13,13 +13,20 @@ get_mapping() {
 }
 
 filter_by() {
-  # Filter input data by type
-  local type="$1"
-  awk -F"${TAB}" -v TYPE="${type}" '$2 == TYPE { print }'
+  # Filter tab-delimited data by value on a specific field; return a
+  # non-zero exit code if nothing is output
+  local value="$1"
+  local field="${2-2}"  # Default 2: Organisational tag in aggregated data
+
+  awk -F"${TAB}" -v VALUE="${value}" -v FIELD="${field}" '
+    BEGIN { output = 0 }
+    $FIELD == VALUE { output = 1; print }
+    END { if (!output) exit 1 }
+  '
 }
 
 map_to() {
-  # Map input to specified mapping
+  # Map aggregated input to specified mapping
   local mapping="$1"
 
   sort -t"${TAB}" -k3b,3 \

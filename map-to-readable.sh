@@ -8,7 +8,7 @@ set -euo pipefail
 BINARY="$(readlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 
-source "${WORK_DIR}/lib/get-mapping.sh"
+source "${WORK_DIR}/mapping-utils.sh"
 USER_MAPPING="${WORK_DIR}/uid-user.map"
 GROUP_MAPPING="${WORK_DIR}/gid-group.map"
 

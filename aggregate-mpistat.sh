@@ -36,7 +36,7 @@ BINARY="$(readlink -fn "$0")"
 WORK_DIR="$(dirname "${BINARY}")"
 
 # Imports
-source "${WORK_DIR}/lib/get-fs-cost.sh"
+source "${WORK_DIR}/mapping-utils.sh"
 
 usage() {
   cat <<-EOF
@@ -52,6 +52,18 @@ usage() {
 	Note: To do non-trivial filetype filtering, the input data must be
 	preclassified by file type.
 	EOF
+}
+
+get_fs_cost() {
+  local fs_type="$1"
+
+  get_mapping "${WORK_DIR}/fs-cost.map" \
+  | filter_by "${fs_type}" 1 \
+  | cut -f2 \
+  || (
+    >&2 echo "No costing data for \"${fs_type}\" filesystems"
+    exit 1
+  )
 }
 
 main() {
