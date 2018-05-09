@@ -13,7 +13,7 @@ library(functional, warn.conflicts = FALSE)
 usage <- function(error) {
   # Output error message, instructions and exit with non-zero status
   write(paste("Error:", error$message), stderr())
-  write("Usage: render-assets.R DATA_FILE OUTPUT_DIR [AGGREGATION_DATE]", stderr())
+  write("Usage: generate-assets.R DATA_FILE OUTPUT_DIR [AGGREGATION_DATE]", stderr())
   quit(status = 1)
 }
 
@@ -21,48 +21,6 @@ usage <- function(error) {
 read.data <- Curry(read.delim, header = FALSE, col.names = c("fs", "orgk", "orgv", "type", "inodes", "size", "cost"))
 
 ## Text Formatting Functions ###########################################
-
-#! FIXME This version of format.quantified works on vectorised input,
-#! but it suffers from an order stability bug that makes it useless :(
-
-#! format.quantified <- (function() {
-#!   # Use a closure to define the default SI magnitude prefixes
-#!   prefix.default <- data.frame(exponent = c(0,  1,   2,   3,   4,   5,   6),
-#!                                prefix   = c("", "k", "M", "G", "T", "P", "E"))
-#!
-#!   is.prefix  <- function(x) { is.data.frame(x) && all(c("exponent", "prefix") %in% colnames(x)) }
-#!   is.decimal <- function(x) { x != trunc(x) }
-#!
-#!   function(n, suffix = "", threshold = 0.8, base = 1000, prefix.alternative = NA, sep = "") {
-#!     # Return n, quantified by order of magnitude (relative to base)
-#!     # to one decimal place (or exactly, for non-quantified integers)
-#!     # with an optional suffix for units
-#!     prefix <- prefix.default
-#!     if (is.prefix(prefix.alternative)) {
-#!       prefix <- filter(prefix, !exponent %in% prefix.alternative$exponent) %>%
-#!                 bind_rows(prefix.alternative)
-#!     }
-#!
-#!     q <- data.frame(n = as.numeric(n), exponent = trunc(log(n, base = base))) %>%
-#!          mutate(quantified = n / (base ^ exponent))
-#!
-#!     q.below <- filter(q, quantified <  base * threshold)
-#!     q.above <- filter(q, quantified >= base * threshold) %>%
-#!                mutate(exponent = exponent + 1, quantified = quantified / base)
-#!
-#!     Q <- bind_rows(q.below, q.above) %>%
-#!          merge(prefix, by = "exponent", all.x = TRUE)
-#!
-#!     paste(
-#!       ifelse(Q$exponent | is.decimal(Q$n), sprintf("%.1f", Q$quantified), Q$n),
-#!       paste(Q$prefix, suffix, sep = ""),
-#!       sep = sep)
-#!   }
-#! })()
-#!
-#! # Convenience wrappers
-#! format.count <- Curry(format.quantified, prefix.alternative = data.frame(exponent = 3, prefix = "B"))
-#! format.data <- Curry(format.quantified, base = 1024, suffix = "iB", sep = " ")
 
 format.quantified <- function(n, base = 1000, prefix = c("", "k", "M", "G", "T", "P"), suffix = "", threshold = 0.8, sep = "") {
   # Return n, quantified by order of magnitude (relative to base,
