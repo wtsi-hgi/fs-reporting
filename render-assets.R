@@ -7,7 +7,6 @@ library(ggplot2,    warn.conflicts = FALSE)
 library(dplyr,      warn.conflicts = FALSE)
 library(xtable,     warn.conflicts = FALSE)
 library(functional, warn.conflicts = FALSE)
-library(templates,  warn.conflicts = FALSE)
 
 ## Utility Functions ###################################################
 
@@ -131,12 +130,104 @@ plot.render <- function(data) {
     scale_y_continuous(breaks = NULL) +
     labs(x = NULL, y = NULL, fill = NULL, alpha = NULL) +
     coord_polar(theta = "y") +
-    theme_minimal()
+    theme_minimal(base_family = "Palatino")
 }
 
-## LaTeX Template Functions ############################################
+## LaTeX Source ########################################################
 
-# TODO
+# FIXME? This is kind of horrible, but at least we don't have yet
+# another dependency on, say, Jinja2. Perhaps Sweave/knitr would be a
+# better alternative...
+
+# Preamble and start of document environment template
+latex.header <- "
+\\documentclass[a4paper]{article}
+
+\\usepackage{graphicx}
+\\usepackage{datetime}
+\\usepackage{fancyhdr}
+\\usepackage{parskip}
+\\usepackage{mathpazo}
+\\usepackage{eulervm}
+\\usepackage[T1]{fontenc}
+
+\\setlength{\\parindent}{0cm}
+\\linespread{1.05}
+\\renewcommand{\\arraystretch}{1.05}
+
+\\newdate{dataDate}%s
+
+\\setlength{\\headheight}{15pt}
+\\pagestyle{fancy}
+\\fancyhf{}
+\\lhead{\\large\\textsc{Human Genetics Programme Filesystem Usage}}
+\\fancyfoot[L]{\\leftmark}
+\\fancyfoot[R]{\\rightmark}
+
+\\begin{document}"
+
+# Appendix and end of document environment string
+latex.footer <- "
+  \\newpage
+  \\appendix
+  \\section{Cost Calculation}
+
+  Total data cost is calculated using the following formula, over the
+  appropriate set of files on filesystem $F$:
+
+  \\begin{displaymath}
+    R_F \\sum_{f \\in F} S_f (t_0 - t_f)
+  \\end{displaymath}
+
+  \\begin{tabbing}
+    Where, \\= $R_F$ \\= $=$ \\= Filesystem cost rate (GBP$\\cdot$TiB$^{-1}\\cdot$year$^{-1}$); \\\\
+           \\> $S_f$ \\> $=$ \\> File size (TiB); \\\\
+           \\> $t_0$ \\> $=$ \\> Aggregation time (\\displaydate{dataDate}); \\\\
+           \\> $t_f$ \\> $=$ \\> File \\texttt{ctime}. \\\\
+  \\end{tabbing}
+
+  Each file's \\texttt{ctime} (change time) is used as a proxy for when
+  it came into existence on its respective filesystem, as it is not
+  likely to change during the file's lifetime. However, as such, the
+  total cost represents a lower bound.
+\\end{document}"
+
+# Section function
+latex.section <- (function() {
+  titles <- list(
+    "lustre"    = "Lustre",
+    "irods"     = "iRODS",
+    "nfs"       = "NFS",
+    "warehouse" = "Warehouse")
+
+  # We don't use templates here, because it has a bug with templates
+  # enclosed within curly braces
+  function(fs) { sprintf("\\section{%s}", titles[[fs]]) }
+})()
+
+latex.subsection <- (function() {
+  titles <- list(
+    "pi"    = "By Principal Investigator",
+    "group" = "By Group",
+    "user"  = "By User")
+
+  import.template <- Curry(sprintf, "%s-%s.%s")
+
+  function(fs, orgk, new.page = FALSE) {
+    asset.filename <- Curry(import.template, fs, orgk)
+
+    paste(
+      sprintf("%s\\subsection{%s}", ifelse(new.page, "\\newpage\n", ""), titles[[orgk]]),
+      "",
+      sprintf("\\input{%s}", asset.filename("tex")),
+      "",
+      "\\begin{center}",
+      sprintf("\\includegraphics[width=0.9\\linewidth]{%s}", asset.filename("pdf")),
+      "\\end{center}",
+      "",
+      sep = "\n")
+  }
+})()
 
 ## Entrypoint ##########################################################
 
@@ -150,7 +241,9 @@ main <- function(argv) {
   data.date <- system(paste("gdate -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
 
   org.values <- c("group", "user", "pi")
-  filename.template <- tmpl("{{ dir }}/{{ fs }}-{{ orgk }}.{{ ext }}")
+
+  report.template <- Curry(sprintf, "%s/report.tex")
+  asset.template <- Curry(sprintf, "%s/%s-%s.%s")
 
   for (i_fs in unique(data$fs)) {
     for (i_orgk in org.values) {
@@ -220,18 +313,19 @@ main <- function(argv) {
                                "\\textbf{Cost}"     = h_cost)
 
       # Export assets
-      asset.filename = Curry(tmplUpdate, filename.template, dir = output, fs = i_fs, orgk = i_orgk)
+      asset.filename = Curry(asset.template, output, i_fs, i_orgk)
 
-      suppressMessages(ggsave(asset.filename(ext = "pdf"),
-                       plot = plot.render(filtered.plot),
-                       device = "pdf"))
+      suppressMessages(
+        ggsave(asset.filename("pdf"),
+               plot = plot.render(filtered.plot),
+               device = "pdf"))
 
       print(xtable(filtered.table, align = "llrrr"),
             include.rownames = FALSE,
             type = "latex",
             sanitize.text.function = as.is,
             hline.after = c(-1, 0, nrow(filtered.table) - 1),
-            file = asset.filename(ext = "tex"))
+            file = asset.filename("tex"))
     }
   }
 }
