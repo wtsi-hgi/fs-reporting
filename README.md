@@ -130,12 +130,6 @@ The final report can be compiled using LaTeX. For example:
 
 ## tl;dr
 
-Sanger-specific mappings can be produced using `create-mappings.sh`,
-which takes an optional `--force` parameter to overwrite the mappings
-that already exist. Note that this script relies on special fields set
-in LDAP records, which may not be available or up-to-date, so its output
-might need manual curation.
-
 **WARNING** The below script does not currently work at scale. For now,
 you are best advised to run the aforementioned pipeline steps manually.
 To assist this, a Sanger-internal repository is available with the
@@ -146,6 +140,7 @@ outlined above) into the final report, a convenience script is available
 that will submit the jobs to an LSF cluster:
 
     compile.sh [--output DIRECTORY]
+               [--bootstrap SCRIPT]
                [--base TIME]
                [--email ADDRESS]
                [--lustre INPUT_DATA]
@@ -160,6 +155,7 @@ Taking the following options:
 Option                      | Behaviour
 --------------------------- | --------------------------------------------------------
 `--output DIRECTORY`        | Create the output in `DIRECTORY`, defaulting to the current working directory
+`--bootstrap SCRIPT`        | Source `SCRIPT` at the beginning of each job in the pipeline
 `--base TIME`               | Set the base time to `TIME`, defaulting to the current system time
 `--email ADDRESS`           | E-mail address to which the completed report is sent; can be specified multiple times
 `--lustre INPUT_DATA`       | `INPUT_DATA` for a Lustre filesytem; can be specified multiple times
