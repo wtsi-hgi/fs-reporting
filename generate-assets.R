@@ -99,6 +99,7 @@ plot.render <- function(data) {
 # another dependency on, say, Jinja2.
 
 # Preamble and start of document environment template
+# @param  Data aggregation date in "{DD}{MM}{YYYY}" format
 latex.header <- Curry(sprintf, "
 \\documentclass[a4paper]{article}
 
@@ -151,7 +152,8 @@ latex.footer <- "
   total cost represents a lower bound.
 \\end{document}"
 
-# Section function
+# Section
+# @param  fs        Filesystem type
 latex.section <- (function() {
   titles <- list(
     "lustre"    = "Lustre",
@@ -164,6 +166,10 @@ latex.section <- (function() {
   function(fs) { sprintf("\\section{%s}", titles[[fs]]) }
 })()
 
+# Subsection
+# @param  fs        Filesystem type
+# @param  orgk      Organisational type
+# @param  new.page  Whether to precede the subsection with a page break
 latex.subsection <- (function() {
   titles <- list(
     "pi"    = "By Principal Investigator",
