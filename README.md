@@ -141,19 +141,19 @@ you are best advised to run the aforementioned pipeline steps manually.
 To assist this, a Sanger-internal repository is available with the
 orchestration script.
 
-To generate the aggregated data (i.e., running the complete pipeline
-outlined above) and compile the final report, a convenience script is
-available that will submit the jobs to an LSF cluster:
+To compile the aggregated data (i.e., running the complete pipeline as
+outlined above) into the final report, a convenience script is available
+that will submit the jobs to an LSF cluster:
 
-    generate.sh [--output DIRECTORY]
-                [--base TIME]
-                [--email ADDRESS]
-                [--lustre INPUT_DATA]
-                [--nfs INPUT_DATA]
-                [--warehouse INPUT_DATA]
-                [--irods INPUT_DATA]
-                [--lsf-aggregate OPTION...]
-                [--lsf-compile OPTION...]
+    compile.sh [--output DIRECTORY]
+               [--base TIME]
+               [--email ADDRESS]
+               [--lustre INPUT_DATA]
+               [--nfs INPUT_DATA]
+               [--warehouse INPUT_DATA]
+               [--irods INPUT_DATA]
+               [--lsf-aggregate OPTION...]
+               [--lsf-compile OPTION...]
 
 Taking the following options:
 
@@ -161,7 +161,7 @@ Option                      | Behaviour
 --------------------------- | --------------------------------------------------------
 `--output DIRECTORY`        | Create the output in `DIRECTORY`, defaulting to the current working directory
 `--base TIME`               | Set the base time to `TIME`, defaulting to the current system time
-`--email ADDRESS`           | E-mail address to which the completion notification is sent; can be specified multiple times
+`--email ADDRESS`           | E-mail address to which the completed report is sent; can be specified multiple times
 `--lustre INPUT_DATA`       | `INPUT_DATA` for a Lustre filesytem; can be specified multiple times
 `--nfs INPUT_DATA`          | `INPUT_DATA` for a NFS filesytem; can be specified multiple times
 `--warehouse INPUT_DATA`    | `INPUT_DATA` for a warehouse filesytem; can be specified multiple times
