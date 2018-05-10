@@ -94,8 +94,7 @@ plot.render <- function(data) {
 ## LaTeX Source ########################################################
 
 # FIXME? This is kind of horrible, but at least we don't have yet
-# another dependency on, say, Jinja2. Perhaps Sweave/knitr would be a
-# better alternative...
+# another dependency on, say, Jinja2.
 
 # Preamble and start of document environment template
 latex.header <- "
