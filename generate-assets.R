@@ -197,7 +197,7 @@ main <- function(argv) {
 
   # Get aggregation date (expects GNU date)
   if (length(argv) == 2) { argv <- c(argv, "now") }
-  data.date <- system(paste("gdate -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
+  data.date <- system(paste("date -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
 
   org.values <- c("pi", "group", "user")
 
