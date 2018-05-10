@@ -14,7 +14,6 @@ module add hgi/git/latest \
 # Use R 3.4.2 and our localised package library
 export PATH="/software/R-3.4.2/bin:${PATH}"
 export R_LIBS="$(git rev-parse --show-toplevel)/sanger/R-modules:${R_LIBS}"
-export PATH="/lustre/scratch119/humgen/teams/hgi/adhoc-fs-report/R/bin:${PATH}"
 
 # Make sure our R dependencies are installed
 Rscript - <<R
@@ -31,3 +30,5 @@ install("ggplot2")
 install("xtable")
 install("functional")
 R
+
+# TODO Make sure LaTeX packages are installed...
