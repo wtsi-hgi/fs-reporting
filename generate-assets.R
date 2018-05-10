@@ -10,10 +10,12 @@ library(functional, warn.conflicts = FALSE)
 
 ## Utility Functions ###################################################
 
+write.stderr <- Curry(write, file = stderr())
+
 usage <- function(error) {
   # Output error message, instructions and exit with non-zero status
-  write(paste("Error:", error$message), stderr())
-  write("Usage: generate-assets.R DATA_FILE OUTPUT_DIR [AGGREGATION_DATE]", stderr())
+  write.stderr(paste("Error:", error$message))
+  write.stderr("Usage: generate-assets.R DATA_FILE OUTPUT_DIR [AGGREGATION_DATE]")
   quit(status = 1)
 }
 
@@ -97,7 +99,7 @@ plot.render <- function(data) {
 # another dependency on, say, Jinja2.
 
 # Preamble and start of document environment template
-latex.header <- "
+latex.header <- Curry(sprintf, "
 \\documentclass[a4paper]{article}
 
 \\usepackage{graphicx}
@@ -121,7 +123,7 @@ latex.header <- "
 \\fancyfoot[L]{\\leftmark}
 \\fancyfoot[R]{\\rightmark}
 
-\\begin{document}"
+\\begin{document}")
 
 # Appendix and end of document environment string
 latex.footer <- "
@@ -197,17 +199,28 @@ main <- function(argv) {
   if (length(argv) == 2) { argv <- c(argv, "now") }
   data.date <- system(paste("gdate -d '", argv[3], "' '+{%d}{%m}{%Y}'", sep = ""), intern = TRUE)
 
-  org.values <- c("group", "user", "pi")
+  org.values <- c("pi", "group", "user")
 
-  report.template <- Curry(sprintf, "%s/report.tex")
+  report.filename <- sprintf("%s/report.tex", output)
   asset.template <- Curry(sprintf, "%s/%s-%s.%s")
 
+  write(latex.header(data.date), report.filename)
+  write.report <- Curry(write, file = report.filename, append = TRUE)
+  new.page <- FALSE
+
   for (i_fs in unique(data$fs)) {
+    write.report(latex.section(i_fs))
+
     for (i_orgk in org.values) {
-      write(paste("Creating ", i_orgk," assets for ", i_fs, "...", sep=""), stderr())
+      write.stderr(paste("Creating ", i_orgk," assets for ", i_fs, "...", sep=""))
 
       # Get data subset for filesystem and organisational type
       filtered <- filter(data, fs == i_fs, orgk == i_orgk)
+
+      if (nrow(filtered) == 0) {
+        # Skip writing output for empty datasets
+        break
+      }
 
       # Mark the top 10 records by overall cost
       orgv.top10 <- filter(filtered, type == "all") %>% top_n(10, cost)
@@ -283,8 +296,15 @@ main <- function(argv) {
             sanitize.text.function = as.is,
             hline.after = c(-1, 0, nrow(filtered.table) - 1),
             file = asset.filename("tex"))
+
+      # Write output into report
+      write.report(latex.subsection(i_fs, i_orgk, new.page))
+      new.page <- TRUE
     }
   }
+
+  write.report(latex.footer)
+  write.stderr("All done :)")
 }
 
 tryCatch(
