@@ -31,4 +31,4 @@ install("xtable")
 install("functional")
 R
 
-# TODO Make sure LaTeX packages are installed...
+# TODO Make sure our LaTeX packages are installed

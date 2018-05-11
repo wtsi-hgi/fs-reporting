@@ -30,7 +30,7 @@ Specifically, we are interested in:
 
 ## Prerequisites
 
-* Bash 4.2, or higher
+* Bash (4.2, or higher)
 * GNU Awk
 * GNU coreutils
 * [teepot](https://github.com/wtsi-npg/teepot)
@@ -130,25 +130,20 @@ The final report can be compiled using LaTeX. For example:
 
 ## tl;dr
 
-**WARNING** The below script does not currently work at scale. For now,
-you are best advised to run the aforementioned pipeline steps manually.
-To assist this, a Sanger-internal repository is available with the
-orchestration script.
-
 To compile the aggregated data (i.e., running the complete pipeline as
 outlined above) into the final report, a convenience script is available
-that will submit the jobs to an LSF cluster:
+that will submit the pipeline to an LSF cluster:
 
-    compile.sh [--output DIRECTORY]
-               [--bootstrap SCRIPT]
-               [--base TIME]
-               [--email ADDRESS]
-               [--lustre INPUT_DATA]
-               [--nfs INPUT_DATA]
-               [--warehouse INPUT_DATA]
-               [--irods INPUT_DATA]
-               [--lsf-aggregate OPTION...]
-               [--lsf-compile OPTION...]
+    submit-pipeline.sh [--output DIRECTORY]
+                       [--bootstrap SCRIPT]
+                       [--base TIME]
+                       [--email ADDRESS]
+                       [--lustre INPUT_DATA]
+                       [--nfs INPUT_DATA]
+                       [--warehouse INPUT_DATA]
+                       [--irods INPUT_DATA]
+                       [--lsf-aggregate OPTION...]
+                       [--lsf-compile OPTION...]
 
 Taking the following options:
 
@@ -161,7 +156,7 @@ Option                      | Behaviour
 `--lustre INPUT_DATA`       | `INPUT_DATA` for a Lustre filesytem; can be specified multiple times
 `--nfs INPUT_DATA`          | `INPUT_DATA` for a NFS filesytem; can be specified multiple times
 `--warehouse INPUT_DATA`    | `INPUT_DATA` for a warehouse filesytem; can be specified multiple times
-`--irods INPUT_DATA`        | `INPUT_DATA` for a iRODS filesytem; can be specified multiple times
+`--irods INPUT_DATA`        | `INPUT_DATA` for an iRODS filesytem; can be specified multiple times
 `--lsf-aggregate OPTION...` | Provide LSF `OPTION`s to the aggregation job submission; can be specified multiple times
 `--lsf-compile OPTION...`   | Provide LSF `OPTION`s to the compilation job submission; can be specified multiple times
 
