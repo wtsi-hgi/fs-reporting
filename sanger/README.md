@@ -7,6 +7,10 @@ represent the users/e-mail addresses to which the final report should be
 sent. A copy of the report will also exist in the `reports` subdirectory
 of this repository.
 
+**Note** The convenience script will first generate the iRODS stat data,
+so the script must be run within an environment which can authenticate
+to iRODS without intervention.
+
 Internally, it uses the following:
 
 ## `create-mappings.sh`
