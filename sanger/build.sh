@@ -49,6 +49,13 @@ most_recent_lustre_data() {
   | head -1
 }
 
+stat_irods() {
+  # Generate the iRODS mpistat-style output, filtered to the given date
+  local data_date="$(date -d "$1" "+%s")"
+
+  # TODO
+}
+
 main() {
   local -a recipients
   if (( $# )); then
@@ -70,7 +77,37 @@ main() {
     exit 0
   fi
 
-  # TODO Many things...
+  local working_dir="$(mktemp -d "${REPO_DIR}/sanger/reports/work-XXXXX")"
+
+  # Create iRODS stat file, filtered to the data date
+  stat_irods "${data_date}" | gzip > "${working_dir}/irods.dat.gz"
+
+  # Create mappings
+  "${REPO_DIR}/sanger/create-mappings.sh" --force
+  mv -f uid-user.map gid-group.map gid-pi_uid.map "${REPO_DIR}/"
+
+  local i
+  local -a options
+
+  # Add recipients
+  for i in "${recipients[@]+"${recipients[@]}"}"; do
+    options+=("--email" "$i")
+  done
+
+  # Add stat files
+  for i in "${LUSTRE_VOLUMES[@]}"; do
+    options+=("--lustre" "${LUSTRE_MPISTAT}/${data_date}_${i}.dat.gz")
+  done
+  options+=("--irods" "${working_dir}/irods.dat.gz")
+
+  # Submit the pipeline!
+  # TODO Set appropriate LSF options...
+  "${REPO_DIR}/submit-pipline.sh" --output "${report}" \
+                                  --work-dir "${working_dir}" \
+                                  --base "${data_date}" \
+                                  --bootstrap "${REPO_DIR}/sanger/bootstrap.sh" \
+                                  --lsf OPTIONS \
+                                  "${options[@]}"
 }
 
 main "$@"
