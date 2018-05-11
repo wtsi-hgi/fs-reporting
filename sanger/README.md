@@ -4,9 +4,8 @@ A convenience script that submits the entire pipeline to the cluster,
 with Sanger-specific mappings and environment setup, is available as
 `build.sh`. It takes any number of command line arguments, all of which
 represent the users/e-mail addresses to which the final report should be
-sent. (If no arguments are provided, then the current user will be
-used.) A copy of the report will also exist in the `reports`
-subdirectory of this repository.
+sent. A copy of the report will also exist in the `reports` subdirectory
+of this repository.
 
 Internally, it uses the following:
 

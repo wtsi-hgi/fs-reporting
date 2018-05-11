@@ -5,6 +5,8 @@
 
 set -euo pipefail
 
+REPO_DIR="$(git rev-parse --show-toplevel)"
+
 LUSTRE_MPISTAT="/lustre/scratch114/teams/hgi/lustre_reports/mpistat/data"
 declare -a LUSTRE_VOLUMES=(114 115 118 119)
 
@@ -32,18 +34,43 @@ most_recent_lustre_data() {
     $(NF - 2) in volumes { found[$(NF - 3)]++ }
 
     END {
-      for (i in found)
-        if (found[i] == count)
+      nothing = 1
+
+      for (i in found) {
+        if (found[i] == count) {
           print i
+          nothing = 0
+        }
+      }
+
+      exit nothing
     }' \
   | sort -nr \
   | head -1
 }
 
-
 main() {
   local -a recipients
-  read -ra recipients <<< "$(to_email "$@")"
+  if (( $# )); then
+    read -ra recipients <<< "$(to_email "$@")"
+  fi
+
+  local data_date
+  if ! data_date="$(most_recent_lustre_data)"; then
+    >&2 echo "No Lustre stat data found!"
+    exit 1
+  fi
+
+  echo "Most recent full complement of Lustre stat data found on $(date -d "${data_date}" "+%A, %-d %B, %Y")"
+
+  # Check if report already exists for that date
+  local report="${REPO_DIR}/sanger/reports/${data_date}.pdf"
+  if [[ -e "${report}" ]]; then
+    echo "Report already exists for this date: ${report}"
+    exit 0
+  fi
+
+  # TODO Many things...
 }
 
-main "${@-$(whoami)}"
+main "$@"
