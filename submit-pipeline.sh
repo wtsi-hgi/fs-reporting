@@ -75,7 +75,9 @@ usage() {
 
 ## Pipeline Functions ##################################################
 
-# NOTE All pipeline functions must be prefixed with "pipeline_"
+# NOTE All pipeline functions must be prefixed with "pipeline_" and take
+# at least one argument, which represents the working directory for the
+# pipeline step
 
 pipeline_aggregate() {
   true
@@ -91,21 +93,42 @@ dispatch() {
   local mode="${1-}"
 
   if [[ "${mode:0:2}" == "__" ]]; then
-    # Subcommand dispatcher
+    # Subcommand/pipeline step dispatcher
     local subcommand="${mode:2}"
-    local -a args=("${@:2}")
+    local bootstrap="$2"
+    local work_dir="$3"
+    local -a args
+
+    if (( $# >= 4 )); then
+      args=("${@:4}")
+    fi
 
     if ! is_pipeline "${subcommand}"; then
       # Unknown subcommand (n.b., this should never happen because the
       # subcommands are for internal use only)
       stderr "I don't know how to \"${subcommand}\"!"
-      usage
       exit 1
     fi
 
-    # TODO Dispatch subcommand
-    echo "$subcommand"
-    echo "${args[@]/#/X}"
+    # Check to see if parent job failed
+    if [[ -e "${work_dir}/.lock" ]]; then
+      stderr "Parent job did not complete successfully!"
+      exit 1
+    fi
+
+    # Initialise and source bootstrap script
+    touch "${work_dir}/.lock"
+    if [[ "${bootstrap}" != "${DUMMY_BOOTSTRAP}" ]] && [[ -e "${bootstrap}" ]]; then
+      echo "Bootstrapping environment"
+      source "${bootstrap}"
+    fi
+
+    # Dispatch pipeline step
+    echo "Running \"${subcommand}\" pipeline step"
+    "pipeline_${subcommand}" "${work_dir}" "${args[@]+"${args[@]}"}"
+    echo "All done :)"
+
+    rm -rf "${work_dir}/.lock"
     exit 0
   fi
 
