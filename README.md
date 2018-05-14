@@ -134,7 +134,8 @@ To compile the aggregated data (i.e., running the complete pipeline as
 outlined above) into the final report, a convenience script is available
 that will submit the pipeline to an LSF cluster:
 
-    submit-pipeline.sh [--output DIRECTORY]
+    submit-pipeline.sh [--output FILENAME]
+                       [--work-dir DIRECTORY]
                        [--bootstrap SCRIPT]
                        [--base TIME]
                        [--email ADDRESS]
@@ -142,24 +143,27 @@ that will submit the pipeline to an LSF cluster:
                        [--nfs INPUT_DATA]
                        [--warehouse INPUT_DATA]
                        [--irods INPUT_DATA]
-                       [--lsf-aggregate OPTION...]
-                       [--lsf-compile OPTION...]
+                       [--lsf-STEP OPTION...]
 
 Taking the following options:
 
 Option                      | Behaviour
 --------------------------- | --------------------------------------------------------
-`--output DIRECTORY`        | Create the output in `DIRECTORY`, defaulting to the current working directory
+`--output FILENAME`         | Write the report to `FILENAME`, defaulting to `$(pwd)/report.pdf`
+`--work-dir DIRECTORY`      | Use `DIRECTORY` for the pipeline's working files, defaulting to the current working directory
 `--bootstrap SCRIPT`        | Source `SCRIPT` at the beginning of each job in the pipeline
 `--base TIME`               | Set the base time to `TIME`, defaulting to the current system time
-`--email ADDRESS`           | E-mail address to which the completed report is sent; can be specified multiple times
+`--mail ADDRESS`            | E-mail address to which the completed report is sent; can be specified multiple times
 `--lustre INPUT_DATA`       | `INPUT_DATA` for a Lustre filesytem; can be specified multiple times
 `--nfs INPUT_DATA`          | `INPUT_DATA` for a NFS filesytem; can be specified multiple times
 `--warehouse INPUT_DATA`    | `INPUT_DATA` for a warehouse filesytem; can be specified multiple times
 `--irods INPUT_DATA`        | `INPUT_DATA` for an iRODS filesytem; can be specified multiple times
-`--lsf-aggregate OPTION...` | Provide LSF `OPTION`s to the aggregation job submission; can be specified multiple times
-`--lsf-compile OPTION...`   | Provide LSF `OPTION`s to the compilation job submission; can be specified multiple times
+`--lsf-STEP OPTION...`      | Provide LSF `OPTION`s to the `STEP` job submission; can be specified multiple times
 
 Note that at least one `--lustre`, `--nfs`, `--warehouse` or `--irods`
 option must be specified with its `INPUT_DATA` readable from the cluster
-nodes.
+nodes. In addition to the final report, its source aggregated data will
+be compressed alongside it, with the extension `.dat.gz`.
+
+The following pipeline `STEP`s are available:
+* `foo` Do something...

@@ -86,12 +86,13 @@ main() {
   "${REPO_DIR}/sanger/create-mappings.sh" --force
   mv -f uid-user.map gid-group.map gid-pi_uid.map "${REPO_DIR}/"
 
+  # Construct options
   local i
   local -a options
 
   # Add recipients
   for i in "${recipients[@]+"${recipients[@]}"}"; do
-    options+=("--email" "$i")
+    options+=("--mail" "$i")
   done
 
   # Add stat files
@@ -106,7 +107,7 @@ main() {
                                   --work-dir "${working_dir}" \
                                   --base "${data_date}" \
                                   --bootstrap "${REPO_DIR}/sanger/bootstrap.sh" \
-                                  --lsf OPTIONS \
+                                  --lsf-STEP OPTIONS \
                                   "${options[@]}"
 }
 
