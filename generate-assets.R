@@ -24,7 +24,7 @@ read.data <- Curry(read.delim, header = FALSE, col.names = c("fs", "orgk", "orgv
 
 ## Text Formatting Functions ###########################################
 
-format.quantified <- function(n, base = 1000, prefix = c("", "k", "M", "G", "T", "P"), suffix = "", threshold = 0.8, sep = "") {
+format.quantified <- function(n, base = 1000, prefix = c("", "k", "M", "G", "T", "P"), suffix = "", sep = "") {
   # Return n, quantified by order of magnitude (relative to base,
   # defaulting to SI prefixes) to one decimal place (or exactly, for
   # non-quantified integers) with an optional suffix for units
@@ -33,11 +33,6 @@ format.quantified <- function(n, base = 1000, prefix = c("", "k", "M", "G", "T",
   exponent <- trunc(log(n, base = base))
 
   is.decimal <- n != trunc(n)
-
-  # Move up to the next prefix multiplier if we're close enough
-  #! FIXME This condition only applies to the first element, but the
-  #! increment will be applied to everything
-  #! if (n / (base ^ (exponent + 1)) >= threshold) { exponent <- exponent + 1 }
 
   paste(
     ifelse(exponent | is.decimal, sprintf("%.1f", n / (base ^ exponent)), n),
