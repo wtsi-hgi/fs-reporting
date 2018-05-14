@@ -5,6 +5,7 @@
 
 set -euo pipefail
 
+# TODO s/greadlink/readlink
 BINARY="$(greadlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
 
@@ -25,7 +26,8 @@ stderr() {
 
 list_pipelines() {
   # List all pipeline steps in this script
-  ggrep -Po '(?<=^pipeline_).*(?=\(\)\s*{)' "${BINARY}"
+  # TODO s/ggrep/grep
+  ggrep -Po '(?<=^pipeline_).+(?=\(\)\s*{)' "${BINARY}"
 }
 
 is_pipeline() {
