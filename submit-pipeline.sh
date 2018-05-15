@@ -5,6 +5,15 @@
 
 set -euo pipefail
 
+# Override macOS/BSD userland with GNU coreutils
+# TODO Remove post-development
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  shopt -s expand_aliases
+  alias readlink=greadlink
+  alias date=gdate
+  alias grep=ggrep
+fi
+
 BINARY="$(readlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
 
@@ -218,8 +227,15 @@ dispatch() {
     exit 0
   fi
 
+  # Show help with no arguments or if explicitly asked for
+  # NOTE This is done outside the main argument parsing because it's a
+  # special case of a non-valued option
+  if (( ! $# )) || [[ "$1" =~ -h|--help ]]; then
+    usage
+    exit 0
+  fi
+
   # Parse command line arguments and submit jobs
-  local -i show_help=0
   local -i bad_options=0
 
   local output="$(pwd)/report.pdf"
@@ -245,10 +261,6 @@ dispatch() {
     fi
 
     case "${option}" in
-      "-h" | "--help")
-        show_help=1
-        ;;
-
       "--output")
         output="$(readlink -fn "$2")"
         shift
@@ -322,15 +334,20 @@ dispatch() {
     bad_options=1
   fi
 
+  if [[ -d "${work_dir}" ]] && ! find "${work_dir}" -mindepth 1 -exec false {} \+; then
+    stderr "The working directory is not empty!"
+    bad_options=1
+  fi
+
   if (( $# )); then
     stderr "Incomplete options provided!"
     bad_options=1
   fi
 
-  # Show help on invalid options (or if it was asked for) and exit
-  if (( bad_options )) || (( show_help )); then
+  # Show help on invalid options and exit non-zero
+  if (( bad_options )); then
     usage
-    exit "${bad_options}"
+    exit 1
   fi
 
   # TODO Submit jobs
