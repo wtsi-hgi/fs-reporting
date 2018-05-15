@@ -163,7 +163,10 @@ Option                      | Behaviour
 Note that at least one `--lustre`, `--nfs`, `--warehouse` or `--irods`
 option must be specified with its `INPUT_DATA` readable from the cluster
 nodes. In addition to the final report, its source aggregated data will
-be compressed alongside it, with the extension `.dat.gz`.
+be compressed alongside it, with the extension `.dat.gz`. Otherwise, the
+working directory and its contents will be deleted upon successful
+completion; as such, do not set the output or any logging to be written
+inside the working directory.
 
 The following pipeline `STEP`s are available:
 * `foo` Do something...

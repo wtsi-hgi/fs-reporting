@@ -69,10 +69,86 @@ usage() {
 	Note that at least one --lustre, --nfs, --warehouse or --irods option
 	must be specified with its INPUT_DATA readable from the cluster nodes.
 	In addition to the final report, its source aggregated data will be
-	compressed alongside it, with the extension .dat.gz.
+	compressed alongside it, with the extension .dat.gz. Otherwise, the
+	working directory and its contents will be deleted upon successful
+	completion; as such, do not set the output or any logging to be written
+	inside the working directory.
 	
 	The following pipeline STEP options are available: ${pipelines}
 	EOF
+}
+
+## LSF Locking Functions ###############################################
+
+__lsb_job_indices() {
+  # Return a list of the LSB job indices, or 0 for a non-array job
+  if ! [[ "${LSB_JOBNAME}" =~ ] ]]; then
+    echo "0"
+    return
+  fi
+
+  # Parse job array specification
+  grep -Po '(?<=\[).+(?=])' <<< "${LSB_JOBNAME}" \
+  | tr "," "\n" \
+  | awk '
+    BEGIN { FS = "[-:]"; OFS=" " }
+    { printf "seq " }
+    NF == 1 { print $1 }
+    NF == 2 { print $1, $2 }
+    NF == 3 { print $1, $3, $2 }' \
+  | paste -sd";" - \
+  | xargs -I{} sh -c "{}" \
+  | sort \
+  | uniq
+}
+
+__lock_dir() {
+  # Return the lock directory for a given directory
+  local work_dir="$1"
+  echo "${work_dir}/.lock"
+}
+
+lock() {
+  # Lock working directory
+  local work_dir="$1"
+  local lock_dir="$(__lock_dir "${work_dir}")"
+
+  # Create lock directory and locks for each job element
+  if ! [[ -d "${lock_dir}" ]]; then
+    mkdir -p "${lock_dir}"
+    __lsb_job_indices | xargs -n1 -I{} touch "${lock_dir}/${LSB_JOBID}.{}"
+  fi
+}
+
+unlock() {
+  # Unlock working directory
+  local work_dir="$1"
+  local lock_dir="$(__lock_dir "${work_dir}")"
+
+  # Remove job index lock and lock directory, when empty
+  rm "${lock_dir}/${LSB_JOBID}.${LSB_JOBINDEX-0}"
+  if find "${lock_dir}" -mindepth 1 -exec false {} \+; then
+    rmdir "${lock_dir}"
+  fi
+}
+
+is_locked() {
+  # Check working directory is locked
+  local work_dir="$1"
+  local lock_dir="$(__lock_dir "${work_dir}")"
+
+  # No lock directory = no lock
+  if ! [[ -d "${work_dir}" ]]; then
+    return 1
+  fi
+
+  # Lock files with a different job ID = locked
+  if ! find "${lock_dir}" -mindepth 1 -not -name "${LSB_JOBID}.*" -exec false {} \+; then
+    return 0
+  fi
+
+  # Otherwise, unlocked
+  return 1
 }
 
 ## Pipeline Functions ##################################################
@@ -113,13 +189,14 @@ dispatch() {
     fi
 
     # Check to see if parent job failed
-    if [[ -e "${work_dir}/.lock" ]]; then
+    if is_locked "${work_dir}"; then
       stderr "Parent job did not complete successfully!"
       exit 1
+    else
+      lock "${work_dir}"
     fi
 
     # Initialise and source bootstrap script
-    touch "${work_dir}/.lock"
     if [[ "${bootstrap}" != "${DUMMY_BOOTSTRAP}" ]] && [[ -e "${bootstrap}" ]]; then
       echo "Bootstrapping environment"
       source "${bootstrap}"
@@ -130,7 +207,7 @@ dispatch() {
     "pipeline_${subcommand}" "${work_dir}" "${args[@]+"${args[@]}"}"
     echo "All done :)"
 
-    rm -rf "${work_dir}/.lock"
+    unlock "${work_dir}"
     exit 0
   fi
 
