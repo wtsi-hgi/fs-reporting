@@ -36,6 +36,16 @@ is_pipeline() {
   list_pipelines | grep -qF "${option}"
 }
 
+under_dir() {
+  # Determine whether a path is hierarchically beneath another, in a
+  # strictly acyclic sense (i.e., symlinks are not considered)
+  local needle="$1"
+  local haystack="$2"
+
+  local common="$(printf "%s\n%s\n" "${needle}" "${haystack}" | sed -e 'N;s/^\(.*\).*\n\1.*$/\1/')"
+  [[ "${common}" == "${haystack}" ]]
+}
+
 usage() {
   local pipelines="$(list_pipelines | paste -sd" " -)"
 
@@ -307,6 +317,11 @@ dispatch() {
 
   if ! (( ${#input_data[@]} )); then
     stderr "No filesystem stat data specified!"
+    bad_options=1
+  fi
+
+  if under_dir "${output}" "${work_dir}"; then
+    stderr "The final output must not be written to the working directory!"
     bad_options=1
   fi
 
