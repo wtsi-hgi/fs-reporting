@@ -261,18 +261,12 @@ dispatch() {
     fi
 
     case "${option}" in
-      "--output")
-        output="$(readlink -fn "$2")"
-        shift
-        ;;
+      "--output" | "--work-dir" | "--bootstrap")
+        value="${option:2}"
+        value="${value/-/_}"
 
-      "--work-dir")
-        work_dir="$(readlink -fn "$2")"
-        shift
-        ;;
-
-      "--bootstrap")
-        bootstrap="$(readlink -fn "$2")"
+        # Mwhahahaa!
+        eval "${value}=\"\$(readlink -fn \"$2\")\""
         shift
         ;;
 
