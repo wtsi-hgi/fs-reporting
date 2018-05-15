@@ -5,8 +5,7 @@
 
 set -euo pipefail
 
-# TODO s/greadlink/readlink
-BINARY="$(greadlink -fn "$0")"
+BINARY="$(readlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
 
 DUMMY_BOOTSTRAP="/"
@@ -26,8 +25,7 @@ stderr() {
 
 list_pipelines() {
   # List all pipeline steps in this script
-  # TODO s/ggrep/grep
-  ggrep -Po '(?<=^pipeline_).+(?=\(\)\s*{)' "${BINARY}"
+  grep -Po '(?<=^pipeline_).+(?=\(\)\s*{)' "${BINARY}"
 }
 
 is_pipeline() {
@@ -198,13 +196,12 @@ dispatch() {
       exit 1
     fi
 
-    # Check to see if parent job failed
+    # Check to see if parent job failed, otherwise lock
     if is_locked "${work_dir}"; then
       stderr "Parent job did not complete successfully!"
       exit 1
-    else
-      lock "${work_dir}"
     fi
+    lock "${work_dir}"
 
     # Initialise and source bootstrap script
     if [[ "${bootstrap}" != "${DUMMY_BOOTSTRAP}" ]] && [[ -e "${bootstrap}" ]]; then
@@ -253,17 +250,17 @@ dispatch() {
         ;;
 
       "--output")
-        output="$2"
+        output="$(readlink -fn "$2")"
         shift
         ;;
 
       "--work-dir")
-        work_dir="$2"
+        work_dir="$(readlink -fn "$2")"
         shift
         ;;
 
       "--bootstrap")
-        bootstrap="$2"
+        bootstrap="$(readlink -fn "$2")"
         shift
         ;;
 
@@ -278,7 +275,7 @@ dispatch() {
         ;;
 
       "--lustre" | "--nfs" | "--warehouse" | "--irods")
-        value="$2"
+        value="$(readlink -fn "$2")"
         if ! [[ -e "${value}" ]]; then
           stderr "No such input data \"${value}\"!"
           bad_options=1
