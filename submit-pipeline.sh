@@ -53,6 +53,14 @@ under_dir() {
   [[ "${common}" == "${haystack}" ]]
 }
 
+is_empty() {
+  # Check if a directory is empty, besides files whose names match an
+  # optional pattern
+  local directory="$1"
+  local besides="${2-}"
+  find "${directory}" -mindepth 1 -not -name "${besides}" -exec false {} \+
+}
+
 usage() {
   local pipelines="$(list_pipelines | paste -sd" " -)"
 
@@ -144,7 +152,7 @@ unlock() {
 
   # Remove job index lock and lock directory, when empty
   rm "${lock_dir}/${LSB_JOBID}.${LSB_JOBINDEX-0}"
-  if find "${lock_dir}" -mindepth 1 -exec false {} \+; then
+  if is_empty "${lock_dir}"; then
     rmdir "${lock_dir}"
   fi
 }
@@ -160,7 +168,7 @@ is_locked() {
   fi
 
   # Lock files with a different job ID = locked
-  if ! find "${lock_dir}" -mindepth 1 -not -name "${LSB_JOBID}.*" -exec false {} \+; then
+  if ! is_empty "${work_dir}" "${LSB_JOBID}.*"; then
     return 0
   fi
 
@@ -240,7 +248,7 @@ dispatch() {
 
   local output="$(pwd)/report.pdf"
   local work_dir="$(pwd)"
-  local bootstrap
+  local bootstrap="${DUMMY_BOOTSTRAP}"
   local base_time="$(date "+%s")"
   local -a recipients=()
   local -a input_data=()
@@ -285,6 +293,7 @@ dispatch() {
         if ! [[ -e "${value}" ]]; then
           stderr "No such input data \"${value}\"!"
           bad_options=1
+          break
         fi
 
         input_data+=("${option:2}:${value}")
@@ -295,23 +304,24 @@ dispatch() {
         if ! is_pipeline "${value}"; then
           stderr "No such pipeline job \"${value}\""
           bad_options=1
-
-        else
-          shift
-          while (( $# )) && [[ "${1:0:2}" != "--" ]]; do
-            # So evil...
-            eval "lsf_${value}+=(\"$1\")"
-            shift
-          done
-
-          # Bypass outer loop shift
-          continue
+          break
         fi
+
+        shift
+        while (( $# )) && [[ "${1:0:2}" != "--" ]]; do
+          # So evil...
+          eval "lsf_${value}+=(\"$1\")"
+          shift
+        done
+
+        # Bypass outer loop shift
+        continue
         ;;
 
       *)
         stderr "Unknown option \"${option}\"!"
         bad_options=1
+        break
         ;;
     esac
 
@@ -328,7 +338,7 @@ dispatch() {
     bad_options=1
   fi
 
-  if [[ -d "${work_dir}" ]] && ! find "${work_dir}" -mindepth 1 -exec false {} \+; then
+  if [[ -d "${work_dir}" ]] && ! is_empty "${work_dir}"; then
     stderr "The working directory is not empty!"
     bad_options=1
   fi
