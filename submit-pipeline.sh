@@ -57,7 +57,7 @@ usage() {
   local pipelines="$(list_pipelines | paste -sd" " -)"
 
   cat <<-EOF
-	Usage: $(basename "${BINARY}") [OPTIONS]
+	Usage: $(basename "${BINARY}") OPTION...
 	
 	Submit the pipeline to generate the aggregated data and compile the
 	final report to an LSF cluser.
@@ -80,7 +80,7 @@ usage() {
 	                          specified multiple times
 	  --irods INPUT_DATA      INPUT_DATA for a iRODS filesytem; can be
 	                          specified multiple times
-	  --lsf-STEP OPTION       Provide LSF OPTION to the STEP job submission;
+	  --lsf-STEP OPTION...    Provide LSF OPTION to the STEP job submission;
 	                          can be specified multiple times
 	
 	Note that at least one --lustre, --nfs, --warehouse or --irods option
