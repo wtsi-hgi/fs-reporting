@@ -12,12 +12,21 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   alias readlink=greadlink
   alias date=gdate
   alias grep=ggrep
+  alias stat=gstat
 fi
 
 BINARY="$(readlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
 
 DUMMY_BOOTSTRAP="/"
+
+# Experimentally, gzip'd mpistat files attain a compression ratio of ~50%
+MPISTAT_GZ_RATIO="0.5"
+
+# Control how aggressively the pipeline utilises the cluster
+CHUNK_SIZE="${CHUNK_SIZE-524288000}"  # i.e., 0.5GiB
+MAX_CHUNKS="${MAX_CHUNKS-20}"
+CONCURRENT="${CONCURRENT-${MAX_CHUNKS}}"
 
 ## Utility Functions ###################################################
 
@@ -354,7 +363,57 @@ dispatch() {
     exit 1
   fi
 
-  # TODO Submit jobs
+  # Give a little synopsis of what will (hopefully) happen
+  echo "Report will be written to ${output}"
+  echo "Working directory is ${work_dir}"
+  echo
+  echo "Basing to $(date -d "@${base_time}" "+%-d %B, %Y") from the following sources:"
+  printf "* %s\n" "${input_data[@]#*:}"
+  echo
+
+  estimate_size() {
+    # Estimate the uncompressed size of the input files; we have to do
+    # this, rather than use gzip -l, because we often have input data
+    # larger than 2 GiB
+    local -a files=("$@")
+
+    stat -c "%s" "${files[@]}" \
+    | awk -v RATIO="${MPISTAT_GZ_RATIO}" \
+          '{ total += $0 } END { print int(total / ( 1 - RATIO )) }'
+  }
+
+  calculate_chunks() {
+    # Calculate the number of chunks required
+    local total_size="$1"
+    bc <<-BC
+		chunks = ${total_size} / ${CHUNK_SIZE}
+		if ( chunks == 0 ) chunks = 1
+		if ( chunks > ${MAX_CHUNKS} ) chunks = ${MAX_CHUNKS}
+		chunks
+		BC
+  }
+
+  local data_size="$(estimate_size "${input_data[@]#*:}")"
+  local chunks="$(calculate_chunks "${data_size}")"
+
+  echo "Decompressed input estimated at ${data_size} bytes"
+  echo "Will split into ${chunks} chunks of approximately $(bc <<< "${data_size}/${chunks}") bytes"
+  echo
+
+  if (( ${#recipients[@]} )); then
+    echo "Report will be e-mailed to:"
+    printf "* %s\n" "${recipients[@]}"
+    echo
+  fi
+
+  # LSF job array specification for parallel tasks
+  local array_spec="[1-${chunks}]%${CONCURRENT}"
+
+  # TODO Submit jobs... This loop is just for illustrative purposes :P
+  echo "Submitting pipeline:"
+  for pipeline in $(list_pipelines); do
+    echo "* ${pipeline} step submitted as job XXX"
+  done
 }
 
 dispatch "$@"
