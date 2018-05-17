@@ -148,7 +148,7 @@ that will submit the pipeline to an LSF cluster:
 Taking the following options:
 
 Option                      | Behaviour
---------------------------- | --------------------------------------------------------
+--------------------------- | ------------------------------------------
 `--output FILENAME`         | Write the report to `FILENAME`, defaulting to `$(pwd)/report.pdf`
 `--work-dir DIRECTORY`      | Use `DIRECTORY` for the pipeline's working files, defaulting to the current working directory
 `--bootstrap SCRIPT`        | Source `SCRIPT` at the beginning of each job in the pipeline
@@ -167,6 +167,21 @@ be compressed alongside it, with the extension `.dat.gz`. Otherwise, the
 working directory and its contents will be deleted upon successful
 completion; as such, do not set the output or any logging to be written
 inside the working directory.
+
+A number of environment variables can also be set to constrain how
+aggressively the pipeline utilises the LSF cluster:
+
+Environment Variable | Default      | Behaviour
+-------------------- | ------------ | ----------------------------------
+`CHUNK_SIZE`         | 524288000    | Approximate input data chunk size (bytes)
+`MAX_CHUNKS`         | 20           | Maximum number of input data chunks
+`CONCURRENT`         | `MAX_CHUNKS` | Number of chunks to process concurrently
+
+Note that `CHUNK_SIZE` ought to decrease as `MAX_CHUNKS` increases,
+otherwise the constraints won't balance each other; `MAX_CHUNKS` should
+not exceed your LSF `MAX_JOB_ARRAY_SIZE`. Lowering `CHUNK_SIZE` should
+produce output faster, but your cluster administrators and fellow users
+won't be happy with you!
 
 The following pipeline `STEP`s are available:
 * `foo` Do something...
