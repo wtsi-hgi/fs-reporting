@@ -302,7 +302,7 @@ pipeline_split() {
         for (x in chunk)
           print x, sprintf("%.1f%% (%d bytes)", 100 * chunk[x] / total, chunk[x])
       }' \
-    | sort -k1n,1
+    | sort -k2n,2
   done
 }
 
