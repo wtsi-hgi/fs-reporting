@@ -255,7 +255,7 @@ pipeline_split() {
 
       if (( out_chunks > chunks )); then
         local -a remainder
-        for c in $(seq -f "%0${chunk_suffix}g" "$(( out_chunks + 1 ))" "${chunks}"); do
+        for c in $(seq -f "%0${chunk_suffix}g" "$(( chunks + 1 ))" "${out_chunks}"); do
           remainder+=("${work_dir}/${fs_type}-${c}.dat")
         done
 
