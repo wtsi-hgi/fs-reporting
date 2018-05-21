@@ -286,7 +286,16 @@ pipeline_split() {
     fi
 
     # Summarise chunk balance
-    # TODO
+    echo "Chunking balance for ${fs_type} data:"
+    find "${work_dir}" -name "${fs_type}-*.dat" -exec stat -c "%n	%n" {} \; \
+    | awk '
+      BEGIN { FS = OFS = "\t" }
+      { total += $2; chunk[$1] = $2 }
+      END {
+        for (x in chunk)
+          print gensub(/.*-0*([0-9]+)\.dat$/, "Chunk \\1", 1, x), sprintf("%.1f%% (%d bytes)", 100 * chunk[x] / total, chunk[x])
+      }' \
+    | sortk -k1n,1
   done
 }
 
