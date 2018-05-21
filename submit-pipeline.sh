@@ -86,6 +86,19 @@ human_size() {
   numfmt --to=iec-i --suffix=B "$@"
 }
 
+human_fs() {
+  # Pretty print filesystem type
+  local fs_type="$1"
+
+  case "${fs_type}" in
+    "lustre")    echo "Lustre";;
+    "irods")     echo "iRODS";;
+    "nfs")       echo "NFS";;
+    "warehouse") echo "Warehouse";;
+    *)           echo "${fs_type}";;
+  esac
+}
+
 usage() {
   local pipelines="$(list_pipelines | paste -sd" " -)"
 
@@ -242,7 +255,7 @@ pipeline_split() {
     fs_size="$(size_of "${fs_data[@]}")"
     fs_chunk_size="$(( chunk_estimate * fs_size / total_size ))"
 
-    echo "Decompressing ${fs_type} input data into ~$(human_size "${fs_chunk_size}") (modulo EOL) chunks..."
+    echo "Decompressing $(human_fs "${fs_type}") input data into ~$(human_size "${fs_chunk_size}") (modulo EOL) chunks..."
 
     # Initial chunking
     zcat "${fs_data[@]}" \
@@ -295,13 +308,13 @@ pipeline_split() {
     fi
 
     # Summarise chunk balance
-    echo "Chunking balance for ${fs_type} data:"
+    echo "Split balance for chunked $(human_fs "${fs_type}") data:"
     find "${work_dir}" -name "${fs_type}-*.dat" -exec stat -c "%n${TAB}%s" {} \; \
     | awk '
       BEGIN { FS = OFS = "\t" }
 
       {
-        chunk_id = gensub(/.*-0*([0-9]+)\.dat$/, "* Chunk \\1", 1, $1)
+        chunk_id = gensub(/.*-0*([0-9]+)\.dat$/, "\\1.", 1, $1)
         total += $2
         chunk[chunk_id] = $2
       }
@@ -311,7 +324,7 @@ pipeline_split() {
           print x, chunk[x], sprintf("%.1f%%", 100 * chunk[x] / total)
       }' \
     | human_size -d"${TAB}" --field=2 \
-    | sort -k2n,2 \
+    | sort -k1n,1 \
     | column -ts"${TAB}"
   done
 }
