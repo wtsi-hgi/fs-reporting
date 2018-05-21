@@ -210,7 +210,7 @@ pipeline_split() {
   # * zcat input and split at (chunk_estimate * ratio) bytes, giving M chunks:
   #   - M = N  All is well in the world
   #   - M > N  Concatenate remainder and split into N chunks, for
-  #            concatenation to the original output
+  #            appendage to the original output
   #   - M < N  Split tail records from original output and redistribute
   #            to make up the shortfall
 
@@ -250,17 +250,39 @@ pipeline_split() {
     # Chunking correction
     if (( out_chunks != chunks )); then
       echo "Attempting to correct..."
-      mkdir -p "${work_dir}/rechunk"
+      local rechunk_dir="${work_dir}/rechunk-${fs_type}"
+      mkdir -p "${rechunk_dir}"
 
       if (( out_chunks > chunks )); then
-        # TODO
-        true
+        local -a remainder
+        for c in $(seq -f "%0${chunk_suffix}g" "$(( out_chunks + 1 ))" "${chunks}"); do
+          remainder+=("${work_dir}/${fs_type}-${c}.dat")
+        done
+
+        # Concatenate the remainder...
+        cat "${remainder[@]}" > "${rechunk_dir}/remainder"
+        rm -f "${remainder[@]}"
+
+        # Rechunk...
+        split --suffix-length="${chunk_suffix}" \
+              --numeric-suffixes=1 \
+              --additional-suffix=".dat" \
+              --number="l/${chunks}" \
+              "${rechunk_dir}/remainder" \
+              "${rechunk_dir}/${fs_type}-"
+
+        # Append to original output...
+        for c in $(find "${rechunk_dir}" -name "${fs_type}-*.dat"); do
+          cat "$c" >> "${work_dir}/$(basename "${c}")"
+        done
 
       elif (( out_chunks < chunks )); then
         # TODO
         true
 
       fi
+
+      rm -rf "${rechunk_dir}"
     fi
 
     # Summarise chunk balance
