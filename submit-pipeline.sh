@@ -13,6 +13,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   alias date=gdate
   alias grep=ggrep
   alias stat=gstat
+  alias split=gsplit
 fi
 
 BINARY="$(readlink -fn "$0")"
@@ -68,6 +69,12 @@ is_empty() {
   local directory="$1"
   local besides="${2-}"
   find "${directory}" -mindepth 1 -not -name "${besides}" -exec false {} \+
+}
+
+size_of() {
+  # Size (bytes) of the input files
+  local -a files=("$@")
+  stat -c "%s" "${files[@]}" | awk '{ total += $0 } END { print total }'
 }
 
 usage() {
@@ -190,6 +197,76 @@ is_locked() {
 # NOTE All pipeline functions must be prefixed with "pipeline_" and take
 # at least one argument, which represents the working directory for the
 # pipeline step
+
+pipeline_split() {
+  # Split and distribute the input data into N approximately even chunks
+  local work_dir="$1"
+  local -i chunks="$2"            # Number of chunks
+  local -i chunk_estimate="$3"    # Estimated chunk size (bytes)
+  local -a input_data=("${@:4}")  # Input data
+
+  # For each filesystem type:
+  # * Find size contribution, wrt to all filesystem input data
+  # * zcat input and split at (chunk_estimate * ratio) bytes, giving M chunks:
+  #   - M = N  All is well in the world
+  #   - M > N  Concatenate remainder and split into N chunks, for
+  #            concatenation to the original output
+  #   - M < N  Split tail records from original output and redistribute
+  #            to make up the shortfall
+
+  local -i total_size="$(size_of "${input_data[@]#*:}")"
+
+  local -i chunk_suffix="$(( ${#chunks} + 1 ))"  # Chunk suffix string length
+
+  local fs_type
+  local -a fs_data
+  local -i fs_size
+  local -i fs_chunk_size
+  local -i out_chunks
+  for fs_type in $(printf "%s\n" "${input_data[@]%%:*}" | sort | uniq); do
+    # Get the input data tagged with the relevant filesystem type
+    fs_data=()
+    for d in "${input_data[@]}"; do
+      [[ "${d%%:*}" == "${fs_type}" ]] && fs_data+=("${d#*:}")
+    done
+
+    fs_size="$(size_of "${fs_data[@]}")"
+    fs_chunk_size="$(( chunk_estimate * fs_size / total_size ))"
+
+    echo "Decompressing ${fs_type} input data into ~${fs_chunk_size} byte (modulo EOL) chunks..."
+
+    # Initial chunking
+    zcat "${fs_data[@]}" \
+    | split --suffix-length="${chunk_suffix}" \
+            --numeric-suffixes=1 \
+            --additional-suffix=".dat" \
+            --line-bytes="${fs_chunk_size}" \
+            - \
+            "${work_dir}/${fs_type}-"
+
+    out_chunks="$(find "${work_dir}" -type f -name "${fs_type}-*.dat" | wc -l)"
+    echo "Split into ${out_chunks} chunks"
+
+    # Chunking correction
+    if (( out_chunks != chunks )); then
+      echo "Attempting to correct..."
+      mkdir -p "${work_dir}/rechunk"
+
+      if (( out_chunks > chunks )); then
+        # TODO
+        true
+
+      elif (( out_chunks < chunks )); then
+        # TODO
+        true
+
+      fi
+    fi
+
+    # Summarise chunk balance
+    # TODO
+  done
+}
 
 pipeline_aggregate() {
   true
@@ -374,12 +451,9 @@ dispatch() {
   estimate_size() {
     # Estimate the uncompressed size of the input files; we have to do
     # this, rather than use gzip -l, because we often have input data
-    # larger than 2 GiB
+    # larger than 2GiB
     local -a files=("$@")
-
-    stat -c "%s" "${files[@]}" \
-    | awk -v RATIO="${MPISTAT_GZ_RATIO}" \
-          '{ total += $0 } END { print int(total / ( 1 - RATIO )) }'
+    bc <<< "$(size_of "${files[@]}") / ( 1 - ${MPISTAT_GZ_RATIO} )"
   }
 
   calculate_chunks() {
@@ -395,9 +469,10 @@ dispatch() {
 
   local data_size="$(estimate_size "${input_data[@]#*:}")"
   local chunks="$(calculate_chunks "${data_size}")"
+  local chunk_size="$(( data_size / chunks ))"
 
   echo "Decompressed input estimated at ${data_size} bytes"
-  echo "Will split into ${chunks} chunks of approximately $(bc <<< "${data_size}/${chunks}") bytes"
+  echo "Will split into ${chunks} chunks of approximately ${chunk_size} bytes"
   echo
 
   if (( ${#recipients[@]} )); then
@@ -409,11 +484,14 @@ dispatch() {
   # LSF job array specification for parallel tasks
   local array_spec="[1-${chunks}]%${CONCURRENT}"
 
+  # TODO For testing only...
+  pipeline_split "${work_dir}" "${chunks}" "${chunk_size}" "${input_data[@]}"
+
   # TODO Submit jobs... This loop is just for illustrative purposes :P
-  echo "Submitting pipeline:"
-  for pipeline in $(list_pipelines); do
-    echo "* ${pipeline} step submitted as job XXX"
-  done
+  #echo "Submitting pipeline:"
+  #for pipeline in $(list_pipelines); do
+  #  echo "* ${pipeline} step submitted as job XXX"
+  #done
 }
 
 dispatch "$@"
