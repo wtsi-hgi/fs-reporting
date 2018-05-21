@@ -5,7 +5,8 @@
 
 # Add build tools and teepot
 module purge
-module add hgi/git/latest \
+module add hgi/coreutils/latest \
+           hgi/git/latest \
            hgi/gcc/latest \
            hgi/autoconf/latest \
            hgi/automake/latest \
