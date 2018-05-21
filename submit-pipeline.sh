@@ -25,7 +25,7 @@ DUMMY_BOOTSTRAP="/"
 MPISTAT_GZ_RATIO="0.5"
 
 # Control how aggressively the pipeline utilises the cluster
-CHUNK_SIZE="${CHUNK_SIZE-524288000}"  # i.e., 0.5GiB
+CHUNK_SIZE="${CHUNK_SIZE-536870912}"  # i.e., 0.5GiB
 MAX_CHUNKS="${MAX_CHUNKS-20}"
 CONCURRENT="${CONCURRENT-${MAX_CHUNKS}}"
 

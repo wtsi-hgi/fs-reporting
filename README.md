@@ -173,7 +173,7 @@ aggressively the pipeline utilises the LSF cluster:
 
 Environment Variable | Default      | Behaviour
 -------------------- | ------------ | ----------------------------------
-`CHUNK_SIZE`         | 524288000    | Approximate input data chunk size (bytes)
+`CHUNK_SIZE`         | 536870912    | Approximate input data chunk size (bytes)
 `MAX_CHUNKS`         | 20           | Maximum number of input data chunks
 `CONCURRENT`         | `MAX_CHUNKS` | Number of chunks to process concurrently
 
