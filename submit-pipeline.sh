@@ -238,12 +238,13 @@ pipeline_split() {
     # Initial chunking
     zcat "${fs_data[@]}" \
     | split --suffix-length="${chunk_suffix}" \
-            --numeric-suffixes \
+            --numeric-suffixes=1 \
+            --additional-suffix=".dat" \
             --line-bytes="${fs_chunk_size}" \
             - \
-            "${work_dir}/${fs_type}"
+            "${work_dir}/${fs_type}-"
 
-    out_chunks="$(find "${work_dir}" -type f -name "${fs_type}*" | wc -l)"
+    out_chunks="$(find "${work_dir}" -type f -name "${fs_type}-*.dat" | wc -l)"
     echo "Split into ${out_chunks} chunks"
 
     # Chunking correction
@@ -255,7 +256,7 @@ pipeline_split() {
       if (( out_chunks > chunks )); then
         local -a remainder
         for c in $(seq -f "%0${chunk_suffix}g" "$(( out_chunks + 1 ))" "${chunks}"); do
-          remainder+=("${work_dir}/${fs_type}${c}")
+          remainder+=("${work_dir}/${fs_type}-${c}.dat")
         done
 
         # Concatenate the remainder...
@@ -264,14 +265,15 @@ pipeline_split() {
 
         # Rechunk...
         split --suffix-length="${chunk_suffix}" \
-              --numeric-suffixes \
+              --numeric-suffixes=1 \
+              --additional-suffix=".dat" \
               --number="l/${chunks}" \
               "${rechunk_dir}/remainder" \
-              "${rechunk_dir}/${fs_type}"
+              "${rechunk_dir}/${fs_type}-"
 
         # Append to original output...
         find "${rechunk_dir}" \
-             -name "${fs_type}*" \
+             -name "${fs_type}-*.dat" \
              -exec sh -c 'wd="$1"; f="$2"; cat "$f" >> "$wd/$(basename "$f")"' _ "${work_dir}" {} \;
 
       elif (( out_chunks < chunks )); then
