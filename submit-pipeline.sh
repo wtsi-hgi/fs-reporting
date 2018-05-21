@@ -14,6 +14,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   alias grep=ggrep
   alias stat=gstat
   alias split=gsplit
+  alias numfmt=gnumfmt
 fi
 
 BINARY="$(readlink -fn "$0")"
@@ -78,6 +79,11 @@ size_of() {
   # Size (bytes) of the input files
   local -a files=("$@")
   stat -c "%s" "${files[@]}" | awk '{ total += $0 } END { print total }'
+}
+
+human_size() {
+  # Pretty print file sizes
+  numfmt --to=iec-i --suffix=B "$@"
 }
 
 usage() {
@@ -236,7 +242,7 @@ pipeline_split() {
     fs_size="$(size_of "${fs_data[@]}")"
     fs_chunk_size="$(( chunk_estimate * fs_size / total_size ))"
 
-    echo "Decompressing ${fs_type} input data into ~$(numfmt --to=iec-i --suffix=B "${fs_chunk_size}") (modulo EOL) chunks..."
+    echo "Decompressing ${fs_type} input data into ~$(human_size "${fs_chunk_size}") (modulo EOL) chunks..."
 
     # Initial chunking
     zcat "${fs_data[@]}" \
@@ -301,12 +307,10 @@ pipeline_split() {
       }
 
       END {
-        for (x in chunk) {
-          "numfmt --to=iec-i --suffix=B " chunk[x] | getline size
-          print x, size, sprintf("%.1f%%", 100 * chunk[x] / total)
-        }
+        for (x in chunk)
+          print x, chunk[x], sprintf("%.1f%%", 100 * chunk[x] / total)
       }' \
-    | numfmt -d"${TAB}" --field=2 --to=iec-i --suffix=B \
+    | human_size -d"${TAB}" --field=2 \
     | sort -k2n,2 \
     | column -ts"${TAB}"
   done
@@ -520,8 +524,8 @@ dispatch() {
   local chunks="$(calculate_chunks "${data_size}")"
   local chunk_size="$(( data_size / chunks ))"
 
-  echo "Decompressed input estimated at $(numfmt --to=iec-i --suffix=B "${data_size}")"
-  echo "Will split into ${chunks} chunks of approximately $(numfmt --to=iec-i --suffix=B "${chunk_size}")"
+  echo "Decompressed input estimated at $(human_size "${data_size}")"
+  echo "Will split into ${chunks} chunks of approximately $(human_size "${chunk_size}")"
   echo
 
   if (( ${#recipients[@]} )); then
