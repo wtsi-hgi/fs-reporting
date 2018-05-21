@@ -272,9 +272,9 @@ pipeline_split() {
               "${rechunk_dir}/${fs_type}-"
 
         # Append to original output...
-        for c in $(find "${rechunk_dir}" -name "${fs_type}-*.dat"); do
-          cat "$c" >> "${work_dir}/$(basename "${c}")"
-        done
+        find "${rechunk_dir}" \
+             -name "${fs_type}-*.dat" \
+             -exec sh -c 'wd="$1"; f="$2"; cat "$f" >> "$wd/$(basename "$f")"' _ "${work_dir}" {} \;
 
       elif (( out_chunks < chunks )); then
         # TODO
