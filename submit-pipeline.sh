@@ -263,7 +263,7 @@ pipeline_split() {
       mkdir -p "${rechunk_dir}"
 
       if (( out_chunks > chunks )); then
-        local -a remainder
+        local -a remainder=()
         for c in $(seq -f "%0${chunk_suffix}g" "$(( chunks + 1 ))" "${out_chunks}"); do
           remainder+=("${work_dir}/${fs_type}-${c}.dat")
         done
@@ -301,7 +301,7 @@ pipeline_split() {
       BEGIN { FS = OFS = "\t" }
 
       {
-        chunk_id = gensub(/.*-0*([0-9]+)\.dat$/, "Chunk \\1", 1, $1)
+        chunk_id = gensub(/.*-0*([0-9]+)\.dat$/, "* Chunk \\1", 1, $1)
         total += $2
         chunk[chunk_id] = $2
       }
