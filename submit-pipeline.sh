@@ -19,6 +19,8 @@ fi
 BINARY="$(readlink -fn "$0")"
 BINDIR="$(dirname "${BINARY}")"
 
+TAB=$'\t'
+
 DUMMY_BOOTSTRAP="/"
 
 # Experimentally, gzip'd mpistat files attain a compression ratio
@@ -234,7 +236,7 @@ pipeline_split() {
     fs_size="$(size_of "${fs_data[@]}")"
     fs_chunk_size="$(( chunk_estimate * fs_size / total_size ))"
 
-    echo "Decompressing ${fs_type} input data into ~${fs_chunk_size} byte (modulo EOL) chunks..."
+    echo "Decompressing ${fs_type} input data into ~$(numfmt --to=iec-i --suffix=B "${fs_chunk_size}") (modulo EOL) chunks..."
 
     # Initial chunking
     zcat "${fs_data[@]}" \
@@ -288,7 +290,7 @@ pipeline_split() {
 
     # Summarise chunk balance
     echo "Chunking balance for ${fs_type} data:"
-    find "${work_dir}" -name "${fs_type}-*.dat" -exec stat -c "%n	%s" {} \; \
+    find "${work_dir}" -name "${fs_type}-*.dat" -exec stat -c "%n${TAB}%s" {} \; \
     | awk '
       BEGIN { FS = OFS = "\t" }
 
@@ -299,10 +301,14 @@ pipeline_split() {
       }
 
       END {
-        for (x in chunk)
-          print x, sprintf("%.1f%% (%d bytes)", 100 * chunk[x] / total, chunk[x])
+        for (x in chunk) {
+          "numfmt --to=iec-i --suffix=B " chunk[x] | getline size
+          print x, size, sprintf("%.1f%%", 100 * chunk[x] / total)
+        }
       }' \
-    | sort -k2n,2
+    | numfmt -d"${TAB}" --field=2 --to=iec-i --suffix=B \
+    | sort -k2n,2 \
+    | column -ts"${TAB}"
   done
 }
 
@@ -514,8 +520,8 @@ dispatch() {
   local chunks="$(calculate_chunks "${data_size}")"
   local chunk_size="$(( data_size / chunks ))"
 
-  echo "Decompressed input estimated at ${data_size} bytes"
-  echo "Will split into ${chunks} chunks of approximately ${chunk_size} bytes"
+  echo "Decompressed input estimated at $(numfmt --to=iec-i --suffix=B "${data_size}")"
+  echo "Will split into ${chunks} chunks of approximately $(numfmt --to=iec-i --suffix=B "${chunk_size}")"
   echo
 
   if (( ${#recipients[@]} )); then

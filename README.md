@@ -32,7 +32,7 @@ Specifically, we are interested in:
 
 * Bash (4.2, or higher)
 * GNU Awk
-* GNU coreutils (8.16, or higher)
+* GNU coreutils (8.21, or higher)
 * [teepot](https://github.com/wtsi-npg/teepot)
 * R (packages: dplyr, ggplot2, xtable, functional)
 * LaTeX (packages: datetime, fancyhdr, parskip, mathpazo, eulervm)
