@@ -183,5 +183,13 @@ not exceed your LSF `MAX_JOB_ARRAY_SIZE`. Lowering `CHUNK_SIZE` should
 produce output faster, but your cluster administrators and fellow users
 won't be happy with you!
 
-The following pipeline `STEP`s are available:
-* `foo` Do something...
+The following `STEP`s make up the pipeline and run in the following
+order:
+
+* `split` Splits and distributes the decompressed input data for each
+  filesystem type into approximately even sized chunks, based on the
+  aforementioned constraints set in the environment variables. This step
+  attempts to maintain uniformity across the chunks, in terms of size,
+  to maintain efficient parallelism. However, note that very small input
+  data will cause the algorithm to degrade, as data is split into exact
+  records (i.e., at EOL).
