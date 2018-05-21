@@ -21,8 +21,9 @@ BINDIR="$(dirname "${BINARY}")"
 
 DUMMY_BOOTSTRAP="/"
 
-# Experimentally, gzip'd mpistat files attain a compression ratio of ~50%
-MPISTAT_GZ_RATIO="0.5"
+# Experimentally, gzip'd mpistat files attain a compression ratio
+# between about 88% and 95%; going for 90% to be conservative
+MPISTAT_GZ_RATIO="0.9"
 
 # Control how aggressively the pipeline utilises the cluster
 CHUNK_SIZE="${CHUNK_SIZE-536870912}"  # i.e., 0.5GiB
