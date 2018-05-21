@@ -192,4 +192,5 @@ order:
   attempts to maintain uniformity across the chunks, in terms of size,
   to maintain efficient parallelism. However, note that very small input
   data will cause the algorithm to degrade, as data is split into exact
-  records (i.e., at EOL).
+  records (i.e., at EOL). Please ensure your working directory can
+  contain the decompressed input data for the duration of the pipeline.

@@ -257,7 +257,7 @@ pipeline_split() {
 
     echo "Decompressing $(human_fs "${fs_type}") input data into ~$(human_size "${fs_chunk_size}") (modulo EOL) chunks..."
 
-    # Initial chunking
+    # Initial chunking based on estimated decompressed size
     zcat "${fs_data[@]}" \
     | split --suffix-length="${chunk_suffix}" \
             --numeric-suffixes=1 \
@@ -266,7 +266,7 @@ pipeline_split() {
             - \
             "${work_dir}/${fs_type}-"
 
-    out_chunks="$(find "${work_dir}" -type f -name "${fs_type}-*.dat" | wc -l)"
+    out_chunks="$(find "${work_dir}" -maxdepth 1 -type f -name "${fs_type}-*.dat" | wc -l)"
     echo "Split into ${out_chunks} chunks"
 
     # Chunking correction
@@ -276,6 +276,7 @@ pipeline_split() {
       mkdir -p "${rechunk_dir}"
 
       if (( out_chunks > chunks )); then
+        # Too many chunks
         local -a remainder=()
         for c in $(seq -f "%0${chunk_suffix}g" "$(( chunks + 1 ))" "${out_chunks}"); do
           remainder+=("${work_dir}/${fs_type}-${c}.dat")
@@ -299,9 +300,20 @@ pipeline_split() {
              -exec sh -c 'wd="$1"; f="$2"; cat "$f" >> "$wd/$(basename "$f")"' _ "${work_dir}" {} \;
 
       elif (( out_chunks < chunks )); then
-        # TODO
-        true
-
+        # Not enough chunks: This isn't a good situation to be in
+        # because, to redistribute the chunks evenly, we'd necessarily
+        # have to read through all the files to determine their lengths
+        # and optimal cut-offs. It's easier (and cheaper) to just
+        # concatenate everything back together and resplit it.
+        # i.e., There's no need to do anything clever!
+        find "${work_dir}" -maxdepth 1 -type f -name "${fs_type}-*.dat" -exec cat {} \+ > "${rechunk_dir}/everything"
+        find "${work_dir}" -maxdepth 1 -type f -name "${fs_type}-*.dat" -delete
+        split --suffix-length="${chunk_suffix}" \
+              --numeric-suffixes=1 \
+              --additional-suffix=".dat" \
+              --number="l/${chunks}" \
+              "${rechunk_dir}/everything" \
+              "${work_dir}/${fs_type}-"
       fi
 
       rm -rf "${rechunk_dir}"
@@ -480,6 +492,8 @@ dispatch() {
     bad_options=1
   fi
 
+  # Note that this condition is true using the default values; perhaps
+  # that's for the best, to push people to set them explicitly
   if under_dir "${output}" "${work_dir}"; then
     stderr "The final output must not be written to the working directory!"
     bad_options=1
