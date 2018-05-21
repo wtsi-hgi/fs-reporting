@@ -481,9 +481,14 @@ dispatch() {
   calculate_chunks() {
     # Calculate the number of chunks required
     local total_size="$1"
-    bc <<-BC
-		chunks = ${total_size} / ${CHUNK_SIZE}
-		if ( chunks == 0 ) chunks = 1
+    bc -l <<-BC
+		define ceil(x) {
+		  auto os,xx;x=-x;os=scale;scale=0
+		  xx=x/1;if(xx>x).=xx--
+		  scale=os;return(-xx)
+		}
+		
+		chunks = ceil(${total_size} / ${CHUNK_SIZE})
 		if ( chunks > ${MAX_CHUNKS} ) chunks = ${MAX_CHUNKS}
 		chunks
 		BC
