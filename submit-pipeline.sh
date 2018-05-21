@@ -295,7 +295,7 @@ pipeline_split() {
         for (x in chunk)
           print gensub(/.*-0*([0-9]+)\.dat$/, "Chunk \\1", 1, x), sprintf("%.1f%% (%d bytes)", 100 * chunk[x] / total, chunk[x])
       }' \
-    | sortk -k1n,1
+    | sort -k1n,1
   done
 }
 
