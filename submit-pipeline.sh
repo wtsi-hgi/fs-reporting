@@ -249,7 +249,7 @@ pipeline_split() {
 
     # Chunking correction
     if (( out_chunks != chunks )); then
-      echo "Attempting to correct..."
+      echo "Correcting..."
       local rechunk_dir="${work_dir}/rechunk-${fs_type}"
       mkdir -p "${rechunk_dir}"
 
