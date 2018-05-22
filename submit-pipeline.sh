@@ -531,11 +531,15 @@ dispatch() {
     fi
 
     local job_id
-    if job_id="$(bsub "${bsub_options[@]}" "${bsub_options[@]}" "${BINARY}" "__${step}" "${options[@]+"${options[@]}"}" 2>/dev/null | grep -Po '(?<=Job <)\d+(?=>)')"; then
+    local bsub_stderr="$(mktemp)"
+    if job_id="$(bsub "${bsub_options[@]}" "${BINARY}" "__${step}" "${options[@]+"${options[@]}"}" 2>"${bsub_stderr}" | grep -Po '(?<=Job <)\d+(?=>)')"; then
       >&2 echo "Submitted ${step} step as job ${job_id}"
+      rm "${bsub_stderr}"
       echo "${job_name}"
     else
       stderr "Could not submit ${step} step!"
+      >&2 cat "${bsub_stderr}"
+      rm "${bsub_stderr}"
       exit 1
     fi
   }
