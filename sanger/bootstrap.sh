@@ -19,8 +19,8 @@ export R_LIBS="$(git rev-parse --show-toplevel)/sanger/R-modules:${R_LIBS}"
 # Make sure our R dependencies are installed
 Rscript - <<R
 install <- function(pkg) {
-  if (!require(pkg)) {
-    install.packages(pkg, repos = "https://cloud.r-project.org/")
+  if (!require(pkg, character.only = TRUE)) {
+    install.packages(pkg, dep = TRUE, repos = "https://cloud.r-project.org/")
   } else {
     write(sprintf("%s is installed", pkg), stderr())
   }
