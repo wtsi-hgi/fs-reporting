@@ -432,6 +432,10 @@ dispatch() {
     bad_options=1
   fi
 
+  if ! [[ -d "${work_dir}" ]]; then
+    mkdir -p "${work_dir}"
+  fi
+
   if (( $# )); then
     stderr "Incomplete options provided!"
     bad_options=1
