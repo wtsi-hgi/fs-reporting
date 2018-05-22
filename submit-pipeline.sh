@@ -221,30 +221,16 @@ is_locked() {
 # pipeline step
 
 pipeline_split() {
-  # Split and distribute the input data into N approximately even chunks
+  # Split and distribute the decompressed input data into even chunks
   local work_dir="$1"
   local -i chunks="$2"            # Number of chunks
-  local -i chunk_estimate="$3"    # Estimated chunk size (bytes)
   local -a input_data=("${@:4}")  # Input data
 
-  # For each filesystem type:
-  # * Find size contribution, wrt to all filesystem input data
-  # * zcat input and split at (chunk_estimate * ratio) bytes, giving M chunks:
-  #   - M = N  All is well in the world
-  #   - M > N  Concatenate remainder and split into N chunks, for
-  #            appendage to the original output
-  #   - M < N  Split tail records from original output and redistribute
-  #            to make up the shortfall
-
-  local -i total_size="$(size_of "${input_data[@]#*:}")"
-
-  local -i chunk_suffix="$(( ${#chunks} + 1 ))"  # Chunk suffix string length
+  # Chunk suffix string length
+  local -i chunk_suffix="$(( ${#chunks} + 1 ))"
 
   local fs_type
   local -a fs_data
-  local -i fs_size
-  local -i fs_chunk_size
-  local -i out_chunks
   for fs_type in $(printf "%s\n" "${input_data[@]%%:*}" | sort | uniq); do
     # Get the input data tagged with the relevant filesystem type
     fs_data=()
@@ -252,76 +238,18 @@ pipeline_split() {
       [[ "${d%%:*}" == "${fs_type}" ]] && fs_data+=("${d#*:}")
     done
 
-    fs_size="$(size_of "${fs_data[@]}")"
-    fs_chunk_size="$(( chunk_estimate * fs_size / total_size ))"
-
-    echo "Decompressing $(human_fs "${fs_type}") input data into ~$(human_size "${fs_chunk_size}") (modulo EOL) chunks..."
-
-    # Initial chunking based on estimated decompressed size
+    echo "Decompressing $(human_fs "${fs_type}") input data into ${chunks} chunks..."
     zcat "${fs_data[@]}" \
     | split --suffix-length="${chunk_suffix}" \
             --numeric-suffixes=1 \
             --additional-suffix=".dat" \
-            --line-bytes="${fs_chunk_size}" \
+            --number="r/${chunks}" \
             - \
             "${work_dir}/${fs_type}-"
 
-    out_chunks="$(find "${work_dir}" -maxdepth 1 -type f -name "${fs_type}-*.dat" | wc -l)"
-    echo "Split into ${out_chunks} chunks"
-
-    # Chunking correction
-    if (( out_chunks != chunks )); then
-      echo "Correcting..."
-      local rechunk_dir="${work_dir}/rechunk-${fs_type}"
-      mkdir -p "${rechunk_dir}"
-
-      if (( out_chunks > chunks )); then
-        # Too many chunks
-        local -a remainder=()
-        for c in $(seq -f "%0${chunk_suffix}g" "$(( chunks + 1 ))" "${out_chunks}"); do
-          remainder+=("${work_dir}/${fs_type}-${c}.dat")
-        done
-
-        # Concatenate the remainder...
-        cat "${remainder[@]}" > "${rechunk_dir}/remainder"
-        rm -f "${remainder[@]}"
-
-        # Rechunk...
-        split --suffix-length="${chunk_suffix}" \
-              --numeric-suffixes=1 \
-              --additional-suffix=".dat" \
-              --number="l/${chunks}" \
-              "${rechunk_dir}/remainder" \
-              "${rechunk_dir}/${fs_type}-"
-
-        # Append to original output...
-        find "${rechunk_dir}" \
-             -name "${fs_type}-*.dat" \
-             -exec sh -c 'wd="$1"; f="$2"; cat "$f" >> "$wd/$(basename "$f")"' _ "${work_dir}" {} \;
-
-      elif (( out_chunks < chunks )); then
-        # Not enough chunks: This isn't a good situation to be in
-        # because, to redistribute the chunks evenly, we'd necessarily
-        # have to read through all the files to determine their lengths
-        # and optimal cut-offs. It's easier (and cheaper) to just
-        # concatenate everything back together and resplit it.
-        # i.e., There's no need to do anything clever!
-        find "${work_dir}" -maxdepth 1 -type f -name "${fs_type}-*.dat" -exec cat {} \+ > "${rechunk_dir}/everything"
-        find "${work_dir}" -maxdepth 1 -type f -name "${fs_type}-*.dat" -delete
-        split --suffix-length="${chunk_suffix}" \
-              --numeric-suffixes=1 \
-              --additional-suffix=".dat" \
-              --number="l/${chunks}" \
-              "${rechunk_dir}/everything" \
-              "${work_dir}/${fs_type}-"
-      fi
-
-      rm -rf "${rechunk_dir}"
-    fi
-
     # Summarise chunk balance
     echo "Split balance for chunked $(human_fs "${fs_type}") data:"
-    find "${work_dir}" -name "${fs_type}-*.dat" -exec stat -c "%n${TAB}%s" {} \; \
+    find "${work_dir}" -name "${fs_type}-*.dat" -exec stat -c "%n${TAB}%s" {} \+ \
     | awk '
       BEGIN { FS = OFS = "\t" }
 
@@ -526,7 +454,7 @@ dispatch() {
   estimate_size() {
     # Estimate the uncompressed size of the input files; we have to do
     # this, rather than use gzip -l, because we often have input data
-    # larger than 2GiB
+    # that decompresses to over 2GiB
     local -a files=("$@")
     bc <<< "$(size_of "${files[@]}") / ( 1 - ${MPISTAT_GZ_RATIO} )"
   }
@@ -534,6 +462,7 @@ dispatch() {
   calculate_chunks() {
     # Calculate the number of chunks required
     local total_size="$1"
+
     bc -l <<-BC
 		define ceil(x) {
 		  auto os,xx;x=-x;os=scale;scale=0
@@ -549,10 +478,9 @@ dispatch() {
 
   local data_size="$(estimate_size "${input_data[@]#*:}")"
   local chunks="$(calculate_chunks "${data_size}")"
-  local chunk_size="$(( data_size / chunks ))"
 
   echo "Decompressed input estimated at $(human_size "${data_size}")"
-  echo "Will split into ${chunks} chunks of approximately $(human_size "${chunk_size}")"
+  echo "Will split into ${chunks} chunks of approximately $(human_size "$(( data_size / chunks ))")"
   echo
 
   if (( ${#recipients[@]} )); then
@@ -565,7 +493,7 @@ dispatch() {
   local array_spec="[1-${chunks}]%${CONCURRENT}"
 
   # TODO For testing only...
-  pipeline_split "${work_dir}" "${chunks}" "${chunk_size}" "${input_data[@]}"
+  pipeline_split "${work_dir}" "${chunks}" "${input_data[@]}"
 
   # TODO Submit jobs... This loop is just for illustrative purposes :P
   #echo "Submitting pipeline:"

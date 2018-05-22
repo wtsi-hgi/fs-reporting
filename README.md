@@ -181,16 +181,17 @@ Note that `CHUNK_SIZE` ought to decrease as `MAX_CHUNKS` increases,
 otherwise the constraints won't balance each other; `MAX_CHUNKS` should
 not exceed your LSF `MAX_JOB_ARRAY_SIZE` value. Lowering `CHUNK_SIZE`
 should produce output faster, but your cluster administrators and fellow
-users won't be happy with you!
+users won't be happy with you! Ideally, `CONCURRENT` should match the
+number of chunks produced, but with many chunks, this may cause
+significant scheduling latency.
 
 The following `STEP`s make up the pipeline and are run in the following
 order:
 
 * `split` Splits and distributes the decompressed input data for each
-  filesystem type into approximately even sized chunks, based on the
-  aforementioned constraints set by environment variables. This step
-  attempts to maintain uniformity across the chunks, in terms of size,
-  to maintain efficient parallelism. However, note that very small input
-  data will cause the algorithm to degrade, as data is split into exact
-  records (i.e., at EOL). Please ensure your working directory can
-  contain the decompressed input data for the duration of the pipeline.
+  filesystem type into chunks, based on the aforementioned constraints
+  set by environment variables. Round robin distribution is used to
+  ensure even chunk sizes and heterogeneity, to maintain efficient
+  parallelism in subsequent steps. Please ensure your working directory
+  can contain the decompressed input data for the duration of the
+  pipeline.
