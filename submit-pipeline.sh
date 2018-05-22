@@ -224,7 +224,7 @@ pipeline_split() {
   # Split and distribute the decompressed input data into even chunks
   local work_dir="$1"
   local -i chunks="$2"            # Number of chunks
-  local -a input_data=("${@:4}")  # Input data
+  local -a input_data=("${@:3}")  # Input data
 
   # Chunk suffix string length
   local -i chunk_suffix="$(( ${#chunks} + 1 ))"
