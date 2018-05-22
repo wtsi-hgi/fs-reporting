@@ -389,7 +389,7 @@ dispatch() {
 
       "--lsf")
         if ! is_pipeline "${value}"; then
-          stderr "No such pipeline job \"${value}\""
+          stderr "No such pipeline job \"${value}\"!"
           bad_options=1
           break
         fi
@@ -489,17 +489,58 @@ dispatch() {
     echo
   fi
 
-  # LSF job array specification for parallel tasks
+  # LSF consistent job identifier and array specification for parallel tasks
+  local pipeline_id="${RANDOM}"
   local array_spec="[1-${chunks}]%${CONCURRENT}"
 
-  # TODO For testing only...
-  pipeline_split "${work_dir}" "${chunks}" "${input_data[@]}"
+  submit() {
+    # bsub wrapper for our dispatch interface
+    local mode="$1"
+    local dependent="$2"
+    local step="$3"
 
-  # TODO Submit jobs... This loop is just for illustrative purposes :P
-  #echo "Submitting pipeline:"
-  #for pipeline in $(list_pipelines); do
-  #  echo "* ${pipeline} step submitted as job XXX"
-  #done
+    if ! is_pipeline "${step}"; then
+      stderr "No such pipeline job \"${step}\"!"
+      exit 1
+    fi
+
+    local -a bsub_options
+    local -a options=("${bootstrap}" "${work_dir}")
+
+    local job_name="report${pipeline_id}_${step}"
+    local fq_name="${job_name}"
+    if [[ "${mode}" == "many" ]]; then
+      fq_name="${fq_name}${array_spec}"
+    fi
+
+    # Give our job a name and optional dependency condition
+    bsub_options+=("-J" "${fq_name}")
+    if [[ "${dependent}" != "-" ]]; then
+      bsub_options+=("-w" "ended(${dependent})")
+    fi
+
+    # Is that the taste of vomit in my mouth?
+    eval "bsub_options+=(\"\${lsf_${step}[@]+\"\${lsf_${step}[@]}\"}\")"
+
+    if (( $# > 3 )); then
+      options+=("${@:4}")
+    fi
+
+    local job_id
+    if job_id="$(bsub "${bsub_options[@]}" "${bsub_options[@]}" "${BINARY}" "__${step}" "${options[@]+"${options[@]}"}" 2>/dev/null | grep -Po '(?<=Job <)\d+(?=>)')"; then
+      >&2 echo "Submitted ${step} step as job ${job_id}"
+      echo "${job_name}"
+    else
+      stderr "Could not submit ${step} step!"
+      exit 1
+    fi
+  }
+
+  # Submit jobs
+  (
+    local step_id
+    step_id="$(submit one - split "${chunks}" "${input_data[@]}")"
+  ) 2>&1
 }
 
 dispatch "$@"
