@@ -77,10 +77,12 @@ main() {
     exit 0
   fi
 
-  local working_dir="$(mktemp -d "${REPO_DIR}/sanger/reports/work-XXXXX")"
+  local log_dir="${REPO_DIR}/sanger/logs"
+  local working_dir="$(mktemp -d "${REPO_DIR}/sanger/working/XXXXX")"
 
   # Create iRODS stat file, filtered to the data date
-  stat_irods "${data_date}" | gzip > "${working_dir}/irods.dat.gz"
+  local irods_data="${REPO_DIR}/sanger/irods-data/${data_date}.dat.gz"
+  stat_irods "${data_date}" | gzip > "${irods_data}"
 
   # Create mappings
   "${REPO_DIR}/sanger/create-mappings.sh" --force
@@ -99,7 +101,7 @@ main() {
   for i in "${LUSTRE_VOLUMES[@]}"; do
     options+=("--lustre" "${LUSTRE_MPISTAT}/${data_date}_${i}.dat.gz")
   done
-  options+=("--irods" "${working_dir}/irods.dat.gz")
+  options+=("--irods" "${irods_data}")
 
   # Submit the pipeline!
   # TODO Set appropriate LSF options...
@@ -107,7 +109,13 @@ main() {
                                   --work-dir "${working_dir}" \
                                   --base "${data_date}" \
                                   --bootstrap "${REPO_DIR}/sanger/bootstrap.sh" \
-                                  --lsf-STEP OPTIONS \
+                                  --lsf-split -G hgi \
+                                              -q normal \
+                                              -e "${log_dir}/split-${data_date}.log" \
+                                              -o "${log_dir}/split-${data_date}.log" \
+                                              -n 1 \
+                                              -M 1000 \
+                                              -R "select(mem>1000) rusage(mem=1000)" \
                                   "${options[@]}"
 }
 
