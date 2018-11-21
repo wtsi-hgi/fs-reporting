@@ -141,10 +141,12 @@ latex.footer <- "
            \\> $t_f$ \\> $=$ \\> File \\texttt{ctime}. \\\\
   \\end{tabbing}
 
-  Each file's \\texttt{ctime} (change time) is used as a proxy for when
-  it came into existence on its respective filesystem, as it is not
-  likely to change during the file's lifetime. However, as such, the
-  total cost represents a lower bound.
+  Each file's \\texttt{ctime} (status change time) is used as a proxy
+  for when it came into existence on its respective filesystem, as its
+  metadata is not likely to change during the file's lifetime. Moreover,
+  the calculation only considers existing files; the metadata for files
+  that have been deleted is lost and thus cannot be included. As such,
+  the total cost very much represents a lower bound.
 \\end{document}"
 
 # Section
